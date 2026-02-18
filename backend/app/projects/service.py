@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import User as AuthUser
-from app.projects.models import Project, ProjectMember, WorkflowStatus, StatusCategory
+from app.projects.models import Project, ProjectMember, WorkflowStatus, StatusCategory, Label
 from app.projects.schemas import ProjectCreate, ProjectUpdate
 
 DEFAULT_STATUSES = [
@@ -234,4 +234,76 @@ async def remove_member(
         raise HTTPException(404, "Member not found")
 
     await db.delete(member)
+    await db.commit()
+
+
+async def get_statuses(db: AsyncSession, project_id: UUID) -> list[WorkflowStatus]:
+    """Get all workflow statuses for a project, ordered by position."""
+    result = await db.execute(
+        select(WorkflowStatus)
+        .where(WorkflowStatus.project_id == project_id)
+        .order_by(WorkflowStatus.position.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_labels(db: AsyncSession, project_id: UUID) -> list[Label]:
+    """Get all labels for a project, ordered by name."""
+    result = await db.execute(
+        select(Label)
+        .where(Label.project_id == project_id)
+        .order_by(Label.name.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def create_label(db: AsyncSession, project_id: UUID, data: "schemas.LabelCreate") -> Label:
+    """Create a new label in the project."""
+    from app.projects import schemas
+
+    label = Label(
+        project_id=project_id,
+        name=data.name,
+        color=data.color,
+    )
+    db.add(label)
+    try:
+        await db.commit()
+        await db.refresh(label)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(409, "A label with this name already exists in the project")
+    return label
+
+
+async def update_label(
+    db: AsyncSession, project_id: UUID, label_id: UUID, data: "schemas.LabelUpdate"
+) -> Label:
+    """Update a label."""
+    from app.projects import schemas
+
+    label = await db.get(Label, label_id)
+    if not label or label.project_id != project_id:
+        raise HTTPException(404, "Label not found")
+
+    if data.name is not None:
+        label.name = data.name
+    if data.color is not None:
+        label.color = data.color
+
+    try:
+        await db.commit()
+        await db.refresh(label)
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(409, "A label with this name already exists in the project")
+    return label
+
+
+async def delete_label(db: AsyncSession, project_id: UUID, label_id: UUID) -> None:
+    """Delete a label."""
+    label = await db.get(Label, label_id)
+    if not label or label.project_id != project_id:
+        raise HTTPException(404, "Label not found")
+    await db.delete(label)
     await db.commit()

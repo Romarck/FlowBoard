@@ -7,12 +7,14 @@ from sqlalchemy import text
 from app.auth.router import router as auth_router
 from app.database import async_session
 from app.projects.router import router as projects_router
+from app.issues.router import router as issues_router
 
 app = FastAPI(title="FlowBoard API", version="0.1.0")
 
 # Register routers
 app.include_router(auth_router)
 app.include_router(projects_router)
+app.include_router(issues_router)
 
 app.add_middleware(
     CORSMiddleware,

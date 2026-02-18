@@ -78,7 +78,16 @@ export interface UpdateMemberData {
 
 export interface Label {
   id: string;
-  project_id: string;
   name: string;
   color: string;
+}
+
+export interface LabelCreateData {
+  name: string;
+  color?: string;
+}
+
+export interface LabelUpdateData {
+  name?: string;
+  color?: string;
 }

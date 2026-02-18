@@ -188,3 +188,90 @@ async def remove_member(
     if requester_role != "admin":
         raise HTTPException(403, "Only admins can remove members")
     await service.remove_member(db, project, user_id, current_user)
+
+
+# ── Workflow Statuses ──────────────────────────────────────────────────────
+
+
+@router.get("/{project_id}/statuses", response_model=list[schemas.StatusResponse])
+async def list_statuses(
+    project_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all workflow statuses for a project."""
+    # Verify user is member
+    await service.get_project(db, project_id, current_user)
+    statuses = await service.get_statuses(db, project_id)
+    return [
+        schemas.StatusResponse(
+            id=str(s.id),
+            name=s.name,
+            category=s.category.value,
+            position=s.position,
+            wip_limit=s.wip_limit,
+        )
+        for s in statuses
+    ]
+
+
+# ── Labels ─────────────────────────────────────────────────────────────────
+
+
+@router.get("/{project_id}/labels", response_model=list[schemas.LabelResponse])
+async def list_labels(
+    project_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all labels for a project."""
+    await service.get_project(db, project_id, current_user)
+    labels = await service.get_labels(db, project_id)
+    return [
+        schemas.LabelResponse(id=str(l.id), name=l.name, color=l.color) for l in labels
+    ]
+
+
+@router.post("/{project_id}/labels", response_model=schemas.LabelResponse, status_code=201)
+async def create_label(
+    project_id: UUID,
+    data: schemas.LabelCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new label in the project."""
+    await service.get_project(db, project_id, current_user)
+    label = await service.create_label(db, project_id, data)
+    return schemas.LabelResponse(id=str(label.id), name=label.name, color=label.color)
+
+
+@router.patch("/{project_id}/labels/{label_id}", response_model=schemas.LabelResponse)
+async def update_label(
+    project_id: UUID,
+    label_id: UUID,
+    data: schemas.LabelUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a label. Only admins and project managers can edit labels."""
+    await service.get_project(db, project_id, current_user)
+    role = await service.get_user_role_in_project(db, project_id, current_user.id)
+    if ROLE_HIERARCHY.get(role, 0) < ROLE_HIERARCHY["project_manager"]:
+        raise HTTPException(403, "Only admins and project managers can edit labels")
+    label = await service.update_label(db, project_id, label_id, data)
+    return schemas.LabelResponse(id=str(label.id), name=label.name, color=label.color)
+
+
+@router.delete("/{project_id}/labels/{label_id}", status_code=204)
+async def delete_label(
+    project_id: UUID,
+    label_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a label. Only admins and project managers can delete labels."""
+    await service.get_project(db, project_id, current_user)
+    role = await service.get_user_role_in_project(db, project_id, current_user.id)
+    if ROLE_HIERARCHY.get(role, 0) < ROLE_HIERARCHY["project_manager"]:
+        raise HTTPException(403, "Only admins and project managers can delete labels")
+    await service.delete_label(db, project_id, label_id)

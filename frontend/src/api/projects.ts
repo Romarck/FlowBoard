@@ -1,5 +1,5 @@
 import client from './client';
-import type { Project, ProjectListItem, CreateProjectData, UpdateProjectData, PaginatedProjects, ProjectMember, AddMemberData, UpdateMemberData } from '../types/project';
+import type { Project, ProjectListItem, CreateProjectData, UpdateProjectData, PaginatedProjects, ProjectMember, AddMemberData, UpdateMemberData, WorkflowStatus, Label, LabelCreateData, LabelUpdateData } from '../types/project';
 
 export const projectsApi = {
   create: (data: CreateProjectData) =>
@@ -29,4 +29,21 @@ export const projectsApi = {
 
   removeMember: (projectId: string, userId: string) =>
     client.delete(`/api/v1/projects/${projectId}/members/${userId}`),
+
+  // Workflow Statuses
+  listStatuses: (projectId: string) =>
+    client.get<WorkflowStatus[]>(`/api/v1/projects/${projectId}/statuses`).then(r => r.data),
+
+  // Labels
+  listLabels: (projectId: string) =>
+    client.get<Label[]>(`/api/v1/projects/${projectId}/labels`).then(r => r.data),
+
+  createLabel: (projectId: string, data: LabelCreateData) =>
+    client.post<Label>(`/api/v1/projects/${projectId}/labels`, data).then(r => r.data),
+
+  updateLabel: (projectId: string, labelId: string, data: LabelUpdateData) =>
+    client.patch<Label>(`/api/v1/projects/${projectId}/labels/${labelId}`, data).then(r => r.data),
+
+  deleteLabel: (projectId: string, labelId: string) =>
+    client.delete(`/api/v1/projects/${projectId}/labels/${labelId}`),
 };

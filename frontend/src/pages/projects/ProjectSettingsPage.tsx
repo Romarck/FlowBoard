@@ -12,6 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useProject, useUpdateProject, useMembers, useUpdateMember, useRemoveMember } from '@/hooks/useProjects';
 import { useAuth } from '@/hooks/useAuth';
 import { AddMemberDialog } from '@/components/projects/AddMemberDialog';
+import { WorkflowView } from '@/components/projects/WorkflowView';
+import { LabelsManager } from '@/components/projects/LabelsManager';
 import type { ProjectMethodology, UpdateMemberData } from '@/types/project';
 
 const ROLE_COLORS: Record<string, string> = {
@@ -412,32 +414,16 @@ export function ProjectSettingsPage() {
         )}
       </Card>
 
-      {/* Future Tabs */}
+      {/* Workflow Statuses */}
       <Card className="p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Additional Settings
-        </h2>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900/50">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Workflow Statuses</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Customize your project workflow</p>
-            </div>
-            <Badge variant="secondary" className="bg-gray-200 dark:bg-gray-700">
-              Coming Soon
-            </Badge>
-          </div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Workflow</h2>
+        <WorkflowView projectId={projectId} />
+      </Card>
 
-          <div className="flex items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900/50">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Labels</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Manage project labels</p>
-            </div>
-            <Badge variant="secondary" className="bg-gray-200 dark:bg-gray-700">
-              Coming Soon
-            </Badge>
-          </div>
-        </div>
+      {/* Labels */}
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Labels</h2>
+        <LabelsManager projectId={projectId} currentUserRole={currentUserRole} />
       </Card>
 
       {/* Add Member Dialog */}

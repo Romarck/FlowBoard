@@ -1,5 +1,6 @@
 """Pydantic schemas for project endpoints."""
 
+import re
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -119,3 +120,55 @@ class MemberUpdate(BaseModel):
         if v not in valid:
             raise ValueError(f"Role must be one of: {', '.join(sorted(valid))}")
         return v
+
+
+class StatusResponse(BaseModel):
+    """Response body representing a workflow status."""
+
+    id: str
+    name: str
+    category: str  # "todo" | "in_progress" | "done"
+    position: int
+    wip_limit: int | None
+
+    model_config = {"from_attributes": True}
+
+
+class LabelCreate(BaseModel):
+    """Request body for creating a label."""
+
+    name: str = Field(min_length=1, max_length=100)
+    color: str = Field(default="#6B7280")
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, v: str) -> str:
+        """Validate that color is a valid hex string."""
+        if not re.match(r"^#[0-9A-Fa-f]{6}$", v):
+            raise ValueError("Color must be a valid hex string (e.g. #FF5733)")
+        return v.upper()
+
+
+class LabelUpdate(BaseModel):
+    """Request body for updating a label."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    color: str | None = None
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, v: str | None) -> str | None:
+        """Validate that color is a valid hex string."""
+        if v is not None and not re.match(r"^#[0-9A-Fa-f]{6}$", v):
+            raise ValueError("Color must be a valid hex string (e.g. #FF5733)")
+        return v.upper() if v else v
+
+
+class LabelResponse(BaseModel):
+    """Response body representing a label."""
+
+    id: str
+    name: str
+    color: str
+
+    model_config = {"from_attributes": True}

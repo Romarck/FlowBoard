@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi } from '../api/projects';
-import type { CreateProjectData, UpdateProjectData, AddMemberData, UpdateMemberData } from '../types/project';
+import type { CreateProjectData, UpdateProjectData, AddMemberData, UpdateMemberData, LabelCreateData, LabelUpdateData } from '../types/project';
 
 export const projectKeys = {
   all: ['projects'] as const,
@@ -84,5 +84,49 @@ export function useRemoveMember(projectId: string) {
     mutationFn: (userId: string) => projectsApi.removeMember(projectId, userId),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: [...projectKeys.detail(projectId), 'members'] }),
+  });
+}
+
+export function useStatuses(projectId: string) {
+  return useQuery({
+    queryKey: [...projectKeys.detail(projectId), 'statuses'],
+    queryFn: () => projectsApi.listStatuses(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useLabels(projectId: string) {
+  return useQuery({
+    queryKey: [...projectKeys.detail(projectId), 'labels'],
+    queryFn: () => projectsApi.listLabels(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useCreateLabel(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: LabelCreateData) => projectsApi.createLabel(projectId, data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: [...projectKeys.detail(projectId), 'labels'] }),
+  });
+}
+
+export function useUpdateLabel(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ labelId, data }: { labelId: string; data: LabelUpdateData }) =>
+      projectsApi.updateLabel(projectId, labelId, data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: [...projectKeys.detail(projectId), 'labels'] }),
+  });
+}
+
+export function useDeleteLabel(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (labelId: string) => projectsApi.deleteLabel(projectId, labelId),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: [...projectKeys.detail(projectId), 'labels'] }),
   });
 }
