@@ -57,3 +57,14 @@ export function useDeleteIssue(projectId: string) {
     },
   });
 }
+
+export function useMoveIssue(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ issueId, data }: { issueId: string; data: { status_id: string; position: number } }) =>
+      issueApi.move(projectId, issueId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: issueKeys.byProject(projectId) });
+    },
+  });
+}

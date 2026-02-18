@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { IssueTypeIcon } from './IssueTypeIcon';
+import { CommentList } from '@/components/comments';
 import { useUpdateIssue } from '@/hooks/useIssues';
+import { useAuthStore } from '@/stores/auth-store';
 import type { Issue } from '@/types/issue';
 import type { WorkflowStatus, ProjectMember } from '@/types/project';
 
@@ -305,8 +307,16 @@ export function IssueDetailDrawer({
           )}
 
           {activeTab === 'activity' && (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Activity log coming soon</p>
+            <div>
+              {useAuthStore.getState().user ? (
+                <CommentList
+                  projectId={projectId}
+                  issueId={issue.id}
+                  currentUser={useAuthStore.getState().user!}
+                />
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">Please log in to view comments</p>
+              )}
             </div>
           )}
         </div>

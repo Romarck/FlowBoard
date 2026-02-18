@@ -1,0 +1,87 @@
+"""Comment business logic."""
+
+from uuid import UUID
+from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.models import User
+from app.comments.models import Comment
+from app.comments.schemas import CommentCreate, CommentUpdate
+from app.issues.models import Issue
+
+
+async def get_comments(db: AsyncSession, issue_id: UUID) -> list[Comment]:
+    """Get all comments for an issue, ordered by creation time."""
+    result = await db.execute(
+        select(Comment)
+        .where(Comment.issue_id == issue_id)
+        .order_by(Comment.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def create_comment(
+    db: AsyncSession,
+    issue_id: UUID,
+    data: CommentCreate,
+    author: User,
+) -> Comment:
+    """Create a new comment on an issue.
+
+    Validates that the issue exists before creating the comment.
+    """
+    # Verify issue exists
+    issue = await db.get(Issue, issue_id)
+    if not issue:
+        raise HTTPException(404, "Issue not found")
+
+    comment = Comment(
+        issue_id=issue_id,
+        author_id=author.id,
+        content=data.content,
+    )
+    db.add(comment)
+    await db.commit()
+    await db.refresh(comment)
+    return comment
+
+
+async def update_comment(
+    db: AsyncSession,
+    comment: Comment,
+    data: CommentUpdate,
+    user: User,
+) -> Comment:
+    """Update a comment.
+
+    Only the author or a system admin can update a comment.
+    """
+    if comment.author_id != user.id and user.role.value != "admin":
+        raise HTTPException(403, "You can only edit your own comments")
+
+    comment.content = data.content
+    await db.commit()
+    await db.refresh(comment)
+    return comment
+
+
+async def delete_comment(
+    db: AsyncSession,
+    comment: Comment,
+    user: User,
+) -> None:
+    """Delete a comment.
+
+    Only the author or a system admin can delete a comment.
+    """
+    if comment.author_id != user.id and user.role.value != "admin":
+        raise HTTPException(403, "You can only delete your own comments")
+
+    await db.delete(comment)
+    await db.commit()
+
+
+async def get_comment(db: AsyncSession, comment_id: UUID) -> Comment | None:
+    """Get a comment by ID."""
+    return await db.get(Comment, comment_id)
