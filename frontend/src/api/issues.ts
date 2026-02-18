@@ -10,6 +10,7 @@ export interface IssueListItem {
   status_id: string;
   priority: string;
   assignee_id: string | null;
+  parent_id: string | null;
   story_points: number | null;
   position: number;
   created_at: string;
