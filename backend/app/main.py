@@ -8,6 +8,8 @@ from app.auth.router import router as auth_router
 from app.database import async_session
 from app.projects.router import router as projects_router
 from app.issues.router import router as issues_router
+from app.sprints.router import router as sprints_router
+from app.comments.router import router as comments_router
 
 app = FastAPI(title="FlowBoard API", version="0.1.0")
 
@@ -15,6 +17,8 @@ app = FastAPI(title="FlowBoard API", version="0.1.0")
 app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(issues_router)
+app.include_router(sprints_router)
+app.include_router(comments_router)
 
 app.add_middleware(
     CORSMiddleware,

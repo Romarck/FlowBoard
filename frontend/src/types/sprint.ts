@@ -10,6 +10,7 @@ export interface Sprint {
   start_date: string | null;
   end_date: string | null;
   status: SprintStatus;
+  issue_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -21,8 +22,15 @@ export interface CreateSprintRequest {
   end_date?: string;
 }
 
-export interface CompleteSprintRequest {
-  move_incomplete_to: string | 'backlog';
+export interface UpdateSprintRequest {
+  name?: string;
+  goal?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface SprintIssueMove {
+  issue_ids: string[];
 }
 
 export interface BurndownDataPoint {

@@ -80,3 +80,26 @@ export interface MoveIssueRequest {
   status_id: string;
   position: number;
 }
+
+export interface IssueListItem {
+  id: string;
+  project_id: string;
+  type: string; // IssueType enum as string
+  key: string;
+  title: string;
+  description: string | null;
+  status_id: string;
+  priority: string; // IssuePriority enum as string
+  assignee_id: string | null;
+  assignee: User | null;
+  reporter_id: string;
+  reporter: User;
+  sprint_id: string | null;
+  parent_id: string | null;
+  story_points: number | null;
+  due_date: string | null;
+  position: number;
+  labels: Label[];
+  created_at: string;
+  updated_at: string;
+}
