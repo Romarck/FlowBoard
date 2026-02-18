@@ -172,3 +172,72 @@ class LabelResponse(BaseModel):
     color: str
 
     model_config = {"from_attributes": True}
+
+
+# ── Metrics ─────────────────────────────────────────────────────────────────
+
+
+class IssuesByStatus(BaseModel):
+    """Issues grouped by status."""
+
+    status_name: str
+    category: str
+    count: int
+
+
+class IssuesByPriority(BaseModel):
+    """Issues grouped by priority."""
+
+    priority: str
+    count: int
+
+
+class IssuesByType(BaseModel):
+    """Issues grouped by type."""
+
+    type: str
+    count: int
+
+
+class SprintMetricsResponse(BaseModel):
+    """Metrics for a single sprint."""
+
+    id: str
+    name: str
+    planned_points: int
+    completed_points: int
+    issue_count: int
+    completed_count: int
+
+
+class IssueMemberStats(BaseModel):
+    """Issue statistics for a team member."""
+
+    member_id: str
+    name: str
+    avatar_url: str | None
+    open_count: int
+
+
+class ProjectMetrics(BaseModel):
+    """Comprehensive metrics for a project."""
+
+    # Overview
+    total_issues: int
+    open_issues: int
+    completed_issues: int
+    overdue_issues: int
+
+    # Breakdowns
+    by_status: list[IssuesByStatus]
+    by_priority: list[IssuesByPriority]
+    by_type: list[IssuesByType]
+
+    # Sprint data
+    active_sprint: SprintMetricsResponse | None
+    recent_sprints: list[SprintMetricsResponse]
+
+    # Team
+    issues_by_member: list[IssueMemberStats]
+
+    model_config = {"from_attributes": True}

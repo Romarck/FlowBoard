@@ -1,5 +1,6 @@
 import client from './client';
 import type { Project, ProjectListItem, CreateProjectData, UpdateProjectData, PaginatedProjects, ProjectMember, AddMemberData, UpdateMemberData, WorkflowStatus, Label, LabelCreateData, LabelUpdateData } from '../types/project';
+import type { ProjectMetrics } from '../types/metrics';
 
 export const projectsApi = {
   create: (data: CreateProjectData) =>
@@ -46,4 +47,8 @@ export const projectsApi = {
 
   deleteLabel: (projectId: string, labelId: string) =>
     client.delete(`/api/v1/projects/${projectId}/labels/${labelId}`),
+
+  // Metrics
+  getMetrics: (projectId: string) =>
+    client.get<ProjectMetrics>(`/api/v1/projects/${projectId}/metrics`).then(r => r.data),
 };

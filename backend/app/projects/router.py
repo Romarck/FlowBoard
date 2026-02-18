@@ -275,3 +275,17 @@ async def delete_label(
     if ROLE_HIERARCHY.get(role, 0) < ROLE_HIERARCHY["project_manager"]:
         raise HTTPException(403, "Only admins and project managers can delete labels")
     await service.delete_label(db, project_id, label_id)
+
+
+# ── Metrics ────────────────────────────────────────────────────────────────
+
+
+@router.get("/{project_id}/metrics", response_model=schemas.ProjectMetrics)
+async def get_project_metrics(
+    project_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get comprehensive metrics for a project."""
+    metrics = await service.get_project_metrics(db, project_id, current_user)
+    return schemas.ProjectMetrics(**metrics)

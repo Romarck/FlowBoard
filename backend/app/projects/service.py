@@ -307,3 +307,214 @@ async def delete_label(db: AsyncSession, project_id: UUID, label_id: UUID) -> No
         raise HTTPException(404, "Label not found")
     await db.delete(label)
     await db.commit()
+
+
+# ── Metrics ────────────────────────────────────────────────────────────────
+
+
+async def get_project_metrics(db: AsyncSession, project_id: UUID, user: AuthUser) -> dict:
+    """Get comprehensive metrics for a project."""
+    from datetime import date
+    from app.issues.models import Issue
+    from app.sprints.models import Sprint, SprintStatus
+
+    # Verify user is member
+    await get_project(db, project_id, user)
+
+    # Total issues
+    total = await db.scalar(
+        select(func.count(Issue.id)).where(Issue.project_id == project_id)
+    ) or 0
+
+    # Open issues (not done)
+    open_issues = await db.scalar(
+        select(func.count(Issue.id))
+        .join(WorkflowStatus, Issue.status_id == WorkflowStatus.id)
+        .where(
+            Issue.project_id == project_id,
+            WorkflowStatus.category != StatusCategory.done,
+        )
+    ) or 0
+
+    # Completed issues (status.category == 'done')
+    completed = await db.scalar(
+        select(func.count(Issue.id))
+        .join(WorkflowStatus, Issue.status_id == WorkflowStatus.id)
+        .where(
+            Issue.project_id == project_id,
+            WorkflowStatus.category == StatusCategory.done,
+        )
+    ) or 0
+
+    # Overdue issues (due_date < today AND not done)
+    overdue = await db.scalar(
+        select(func.count(Issue.id))
+        .join(WorkflowStatus, Issue.status_id == WorkflowStatus.id)
+        .where(
+            Issue.project_id == project_id,
+            Issue.due_date < date.today(),
+            WorkflowStatus.category != StatusCategory.done,
+        )
+    ) or 0
+
+    # Issues by status
+    status_rows = await db.execute(
+        select(
+            WorkflowStatus.name,
+            WorkflowStatus.category,
+            func.count(Issue.id),
+        )
+        .join(WorkflowStatus, Issue.status_id == WorkflowStatus.id)
+        .where(Issue.project_id == project_id)
+        .group_by(WorkflowStatus.name, WorkflowStatus.category)
+    )
+    by_status = [
+        {"status_name": row[0], "category": row[1].value, "count": row[2]}
+        for row in status_rows
+    ]
+
+    # Issues by priority
+    priority_rows = await db.execute(
+        select(Issue.priority, func.count(Issue.id))
+        .where(Issue.project_id == project_id)
+        .group_by(Issue.priority)
+    )
+    by_priority = [
+        {"priority": row[0].value, "count": row[1]} for row in priority_rows
+    ]
+
+    # Issues by type
+    type_rows = await db.execute(
+        select(Issue.type, func.count(Issue.id))
+        .where(Issue.project_id == project_id)
+        .group_by(Issue.type)
+    )
+    by_type = [{"type": row[0].value, "count": row[1]} for row in type_rows]
+
+    # Active sprint
+    active_sprint = None
+    active_sprint_row = await db.execute(
+        select(Sprint)
+        .where(
+            Sprint.project_id == project_id,
+            Sprint.status == SprintStatus.active,
+        )
+        .limit(1)
+    )
+    active_sprint_obj = active_sprint_row.scalar_one_or_none()
+    if active_sprint_obj:
+        total_points = await db.scalar(
+            select(func.coalesce(func.sum(Issue.story_points), 0))
+            .where(Issue.sprint_id == active_sprint_obj.id)
+        ) or 0
+        completed_points = await db.scalar(
+            select(func.coalesce(func.sum(Issue.story_points), 0))
+            .join(WorkflowStatus, Issue.status_id == WorkflowStatus.id)
+            .where(
+                Issue.sprint_id == active_sprint_obj.id,
+                WorkflowStatus.category == StatusCategory.done,
+            )
+        ) or 0
+        issue_count = await db.scalar(
+            select(func.count(Issue.id)).where(
+                Issue.sprint_id == active_sprint_obj.id
+            )
+        ) or 0
+        completed_count = await db.scalar(
+            select(func.count(Issue.id))
+            .join(WorkflowStatus, Issue.status_id == WorkflowStatus.id)
+            .where(
+                Issue.sprint_id == active_sprint_obj.id,
+                WorkflowStatus.category == StatusCategory.done,
+            )
+        ) or 0
+        active_sprint = {
+            "id": str(active_sprint_obj.id),
+            "name": active_sprint_obj.name,
+            "planned_points": total_points,
+            "completed_points": completed_points,
+            "issue_count": issue_count,
+            "completed_count": completed_count,
+        }
+
+    # Recent sprints (last 5 completed)
+    recent_sprints = []
+    recent_rows = await db.execute(
+        select(Sprint)
+        .where(
+            Sprint.project_id == project_id,
+            Sprint.status == SprintStatus.completed,
+        )
+        .order_by(Sprint.end_date.desc())
+        .limit(5)
+    )
+    for sprint_obj in recent_rows.scalars().all():
+        total_points = await db.scalar(
+            select(func.coalesce(func.sum(Issue.story_points), 0))
+            .where(Issue.sprint_id == sprint_obj.id)
+        ) or 0
+        completed_points = await db.scalar(
+            select(func.coalesce(func.sum(Issue.story_points), 0))
+            .join(WorkflowStatus, Issue.status_id == WorkflowStatus.id)
+            .where(
+                Issue.sprint_id == sprint_obj.id,
+                WorkflowStatus.category == StatusCategory.done,
+            )
+        ) or 0
+        issue_count = await db.scalar(
+            select(func.count(Issue.id)).where(Issue.sprint_id == sprint_obj.id)
+        ) or 0
+        completed_count = await db.scalar(
+            select(func.count(Issue.id))
+            .join(WorkflowStatus, Issue.status_id == WorkflowStatus.id)
+            .where(
+                Issue.sprint_id == sprint_obj.id,
+                WorkflowStatus.category == StatusCategory.done,
+            )
+        ) or 0
+        recent_sprints.append(
+            {
+                "id": str(sprint_obj.id),
+                "name": sprint_obj.name,
+                "planned_points": total_points,
+                "completed_points": completed_points,
+                "issue_count": issue_count,
+                "completed_count": completed_count,
+            }
+        )
+
+    # Issues by member
+    member_rows = await db.execute(
+        select(
+            AuthUser.id,
+            AuthUser.name,
+            AuthUser.avatar_url,
+            func.count(Issue.id),
+        )
+        .outerjoin(Issue, (Issue.assignee_id == AuthUser.id) & (Issue.project_id == project_id))
+        .group_by(AuthUser.id, AuthUser.name, AuthUser.avatar_url)
+        .order_by(func.count(Issue.id).desc())
+    )
+    issues_by_member = [
+        {
+            "member_id": str(row[0]),
+            "name": row[1],
+            "avatar_url": row[2],
+            "open_count": row[3],
+        }
+        for row in member_rows
+        if row[3] > 0  # Only show members with assigned issues
+    ]
+
+    return {
+        "total_issues": total,
+        "open_issues": open_issues,
+        "completed_issues": completed,
+        "overdue_issues": overdue,
+        "by_status": by_status,
+        "by_priority": by_priority,
+        "by_type": by_type,
+        "active_sprint": active_sprint,
+        "recent_sprints": recent_sprints,
+        "issues_by_member": issues_by_member,
+    }
