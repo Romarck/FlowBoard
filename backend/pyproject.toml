@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "flowboard-backend"
+version = "0.1.0"
+description = "FlowBoard API - Agile Project Management"
+authors = ["FlowBoard Team"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.0"
+uvicorn = { version = "^0.34.0", extras = ["standard"] }
+sqlalchemy = { version = "^2.0", extras = ["asyncio"] }
+asyncpg = "^0.30.0"
+alembic = "^1.14.0"
+pydantic-settings = "^2.7.0"
+python-multipart = "^0.0.18"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-asyncio = "^0.24.0"
+httpx = "^0.28.0"
+ruff = "^0.9.0"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
