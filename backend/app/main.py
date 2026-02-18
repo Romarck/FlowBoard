@@ -1,5 +1,10 @@
+"""FlowBoard API — FastAPI application entry point."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+
+from app.database import async_session
 
 app = FastAPI(title="FlowBoard API", version="0.1.0")
 
@@ -14,4 +19,14 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    """Health check endpoint — verifies API is running and database is reachable."""
+    db_status = "disconnected"
+    try:
+        async with async_session() as session:
+            await session.execute(text("SELECT 1"))
+            db_status = "connected"
+    except Exception:
+        db_status = "disconnected"
+
+    status = "ok" if db_status == "connected" else "degraded"
+    return {"status": status, "db": db_status}

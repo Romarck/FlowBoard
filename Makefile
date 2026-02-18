@@ -1,4 +1,4 @@
-.PHONY: dev test lint migrate stop clean
+.PHONY: dev test lint migrate migrate-create migrate-rollback seed stop clean
 
 dev:
 	docker compose up
@@ -19,6 +19,15 @@ lint:
 
 migrate:
 	docker compose exec backend alembic upgrade head
+
+migrate-create:
+	docker compose exec backend alembic revision --autogenerate -m "$(MSG)"
+
+migrate-rollback:
+	docker compose exec backend alembic downgrade -1
+
+seed:
+	docker compose exec backend python -m app.seed
 
 clean:
 	docker compose down -v
