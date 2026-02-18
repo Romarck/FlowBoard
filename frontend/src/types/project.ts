@@ -4,7 +4,7 @@ import type { UserRole, User } from './auth';
 
 export type ProjectMethodology = 'kanban' | 'scrum';
 
-export type StatusCategory = 'todo' | 'in_progress' | 'done';
+export type StatusCategory = 'todo' | 'in_progress' | 'done' | 'cancelled';
 
 export interface WorkflowStatus {
   id: string;
