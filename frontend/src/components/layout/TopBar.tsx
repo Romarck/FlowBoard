@@ -1,9 +1,19 @@
-import { Search, Bell, Moon, Sun, Menu } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Bell, Moon, Sun, Menu, LogOut, User as UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
+import { useAuth } from '@/hooks/useAuth';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 
 export function TopBar() {
   const { theme, toggleTheme, toggleSidebar } = useUIStore();
+  const { user, logout } = useAuth();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    setIsDropdownOpen(false);
+  };
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-900">
@@ -58,11 +68,66 @@ export function TopBar() {
           <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
         </button>
 
-        {/* User avatar placeholder */}
-        <div className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
-          U
-        </div>
+        {/* User avatar with dropdown */}
+        {user && (
+          <div className="relative ml-2">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="User menu"
+            >
+              <UserAvatar
+                name={user.name}
+                avatarUrl={user.avatar_url}
+                size="sm"
+              />
+            </button>
+
+            {/* Dropdown menu */}
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900 z-50">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {user.email}
+                  </p>
+                </div>
+
+                <div className="py-1">
+                  {/* Profile option (placeholder for future) */}
+                  <button
+                    disabled
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    title="Coming in next version"
+                  >
+                    <UserIcon className="h-4 w-4" />
+                    My Profile
+                  </button>
+
+                  {/* Logout option */}
+                  <button
+                    onClick={handleLogout}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Close dropdown when clicking outside */}
+      {isDropdownOpen && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setIsDropdownOpen(false)}
+        />
+      )}
     </header>
   );
 }
