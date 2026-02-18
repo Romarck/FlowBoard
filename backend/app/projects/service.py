@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import User
+from app.auth.models import User as AuthUser
 from app.projects.models import Project, ProjectMember, WorkflowStatus, StatusCategory
 from app.projects.schemas import ProjectCreate, ProjectUpdate
 
@@ -30,7 +30,7 @@ def generate_project_key(name: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", key.upper())[:10] or "PROJ"
 
 
-async def create_project(db: AsyncSession, data: ProjectCreate, owner: User) -> Project:
+async def create_project(db: AsyncSession, data: ProjectCreate, owner: AuthUser) -> Project:
     key = data.key.upper() if data.key else generate_project_key(data.name)
     key = re.sub(r"[^A-Z0-9]", "", key)[:10]
 
@@ -65,7 +65,7 @@ async def create_project(db: AsyncSession, data: ProjectCreate, owner: User) -> 
 
 
 async def get_projects(
-    db: AsyncSession, user: User, page: int = 1, size: int = 20
+    db: AsyncSession, user: AuthUser, page: int = 1, size: int = 20
 ) -> tuple[list[Project], int]:
     # Count total
     count_q = (
@@ -89,7 +89,7 @@ async def get_projects(
     return projects, total
 
 
-async def get_project(db: AsyncSession, project_id: UUID, user: User) -> Project:
+async def get_project(db: AsyncSession, project_id: UUID, user: AuthUser) -> Project:
     project = await db.get(Project, project_id)
     if not project:
         raise HTTPException(404, "Project not found")
@@ -114,7 +114,7 @@ async def get_user_role_in_project(
 
 
 async def update_project(
-    db: AsyncSession, project: Project, data: ProjectUpdate, user: User
+    db: AsyncSession, project: Project, data: ProjectUpdate, user: AuthUser
 ) -> Project:
     role = await get_user_role_in_project(db, project.id, user.id)
     if role not in ("admin", "project_manager"):
@@ -133,9 +133,105 @@ async def update_project(
     return project
 
 
-async def delete_project(db: AsyncSession, project: Project, user: User) -> None:
+async def delete_project(db: AsyncSession, project: Project, user: AuthUser) -> None:
     role = await get_user_role_in_project(db, project.id, user.id)
     if role != "admin":
         raise HTTPException(403, "Only admins can delete projects")
     await db.delete(project)
+    await db.commit()
+
+
+async def get_members(db: AsyncSession, project_id: UUID) -> list[ProjectMember]:
+    """Return all members of a project with their user data."""
+    result = await db.execute(
+        select(ProjectMember)
+        .where(ProjectMember.project_id == project_id)
+        .order_by(ProjectMember.joined_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def add_member(
+    db: AsyncSession,
+    project: Project,
+    email: str,
+    role: str,
+    requester: AuthUser,
+) -> ProjectMember:
+    """Add a user to the project by email."""
+    # Find user by email
+    result = await db.execute(select(AuthUser).where(AuthUser.email == email))
+    target_user = result.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(404, "User not found")
+
+    # Check if already a member
+    existing = await db.execute(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project.id,
+            ProjectMember.user_id == target_user.id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(409, "User is already a member")
+
+    member = ProjectMember(
+        project_id=project.id,
+        user_id=target_user.id,
+        role=role,
+    )
+    db.add(member)
+    await db.commit()
+    await db.refresh(member)
+    return member
+
+
+async def update_member_role(
+    db: AsyncSession,
+    project: Project,
+    target_user_id: UUID,
+    new_role: str,
+    requester: AuthUser,
+) -> ProjectMember:
+    """Update a member's role. Owner cannot be demoted."""
+    if target_user_id == project.owner_id:
+        raise HTTPException(403, "Owner's role cannot be changed")
+
+    result = await db.execute(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project.id,
+            ProjectMember.user_id == target_user_id,
+        )
+    )
+    member = result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(404, "Member not found")
+
+    member.role = new_role
+    await db.commit()
+    await db.refresh(member)
+    return member
+
+
+async def remove_member(
+    db: AsyncSession,
+    project: Project,
+    target_user_id: UUID,
+    requester: AuthUser,
+) -> None:
+    """Remove a member. Owner cannot be removed."""
+    if target_user_id == project.owner_id:
+        raise HTTPException(403, "Owner cannot be removed from the project")
+
+    result = await db.execute(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project.id,
+            ProjectMember.user_id == target_user_id,
+        )
+    )
+    member = result.scalar_one_or_none()
+    if not member:
+        raise HTTPException(404, "Member not found")
+
+    await db.delete(member)
     await db.commit()

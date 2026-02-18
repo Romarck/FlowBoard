@@ -1,5 +1,5 @@
 import client from './client';
-import type { Project, ProjectListItem, CreateProjectData, UpdateProjectData, PaginatedProjects } from '../types/project';
+import type { Project, ProjectListItem, CreateProjectData, UpdateProjectData, PaginatedProjects, ProjectMember, AddMemberData, UpdateMemberData } from '../types/project';
 
 export const projectsApi = {
   create: (data: CreateProjectData) =>
@@ -16,4 +16,17 @@ export const projectsApi = {
 
   delete: (id: string) =>
     client.delete(`/api/v1/projects/${id}`),
+
+  // Member management
+  listMembers: (projectId: string) =>
+    client.get<ProjectMember[]>(`/api/v1/projects/${projectId}/members`).then(r => r.data),
+
+  addMember: (projectId: string, data: AddMemberData) =>
+    client.post<ProjectMember>(`/api/v1/projects/${projectId}/members`, data).then(r => r.data),
+
+  updateMember: (projectId: string, userId: string, data: UpdateMemberData) =>
+    client.patch<ProjectMember>(`/api/v1/projects/${projectId}/members/${userId}`, data).then(r => r.data),
+
+  removeMember: (projectId: string, userId: string) =>
+    client.delete(`/api/v1/projects/${projectId}/members/${userId}`),
 };

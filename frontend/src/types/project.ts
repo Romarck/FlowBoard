@@ -59,12 +59,21 @@ export interface PaginatedProjects {
 }
 
 export interface ProjectMember {
-  id: string;
-  project_id: string;
   user_id: string;
-  user: User;
-  role: UserRole;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  role: 'admin' | 'project_manager' | 'developer' | 'viewer';
   joined_at: string;
+}
+
+export interface AddMemberData {
+  email: string;
+  role: 'admin' | 'project_manager' | 'developer' | 'viewer';
+}
+
+export interface UpdateMemberData {
+  role: 'admin' | 'project_manager' | 'developer' | 'viewer';
 }
 
 export interface Label {

@@ -75,7 +75,7 @@ class ProjectMember(Base):
 
     # Relationships
     project = relationship("Project", back_populates="members")
-    user = relationship("User", back_populates="project_memberships")
+    user = relationship("User", back_populates="project_memberships", lazy="selectin")
 
     def __repr__(self) -> str:
         return f"<ProjectMember project={self.project_id} user={self.user_id}>"

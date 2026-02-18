@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.projects.models import ProjectMethodology
 
@@ -75,3 +75,47 @@ class ProjectListResponse(BaseModel):
     total: int
     page: int
     size: int
+
+
+class MemberResponse(BaseModel):
+    """Response body representing a project member."""
+
+    user_id: str
+    name: str
+    email: str
+    avatar_url: str | None
+    role: str
+    joined_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class MemberAdd(BaseModel):
+    """Request body for adding a member to a project."""
+
+    email: EmailStr
+    role: str = "developer"
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        """Validate that role is one of the allowed values."""
+        valid = {"admin", "project_manager", "developer", "viewer"}
+        if v not in valid:
+            raise ValueError(f"Role must be one of: {', '.join(sorted(valid))}")
+        return v
+
+
+class MemberUpdate(BaseModel):
+    """Request body for updating a member's role."""
+
+    role: str
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, v: str) -> str:
+        """Validate that role is one of the allowed values."""
+        valid = {"admin", "project_manager", "developer", "viewer"}
+        if v not in valid:
+            raise ValueError(f"Role must be one of: {', '.join(sorted(valid))}")
+        return v

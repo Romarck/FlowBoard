@@ -1,11 +1,12 @@
 """Projects API router."""
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_current_user
 from app.auth.models import User
+from app.common.permissions import ROLE_HIERARCHY
 from app.database import get_db
 from app.projects import schemas, service
 from app.projects.models import Project
@@ -106,3 +107,84 @@ async def delete_project(
 ):
     project = await service.get_project(db, project_id, current_user)
     await service.delete_project(db, project, current_user)
+
+
+def _member_to_response(member) -> schemas.MemberResponse:
+    """Convert a ProjectMember to MemberResponse."""
+    return schemas.MemberResponse(
+        user_id=str(member.user_id),
+        name=member.user.name,
+        email=member.user.email,
+        avatar_url=member.user.avatar_url,
+        role=member.role,
+        joined_at=member.joined_at,
+    )
+
+
+@router.get("/{project_id}/members", response_model=list[schemas.MemberResponse])
+async def list_members(
+    project_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all members of a project."""
+    project = await service.get_project(db, project_id, current_user)
+    members = await service.get_members(db, project_id)
+    return [_member_to_response(m) for m in members]
+
+
+@router.post("/{project_id}/members", response_model=schemas.MemberResponse, status_code=201)
+async def add_member(
+    project_id: UUID,
+    data: schemas.MemberAdd,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add a member to a project by email."""
+    project = await service.get_project(db, project_id, current_user)
+    # Check requester is admin or PM
+    requester_role = await service.get_user_role_in_project(
+        db, project_id, current_user.id
+    )
+    if ROLE_HIERARCHY.get(requester_role, 0) < ROLE_HIERARCHY["project_manager"]:
+        raise HTTPException(
+            403, "Only admins and project managers can add members"
+        )
+    member = await service.add_member(db, project, data.email, data.role, current_user)
+    return _member_to_response(member)
+
+
+@router.patch("/{project_id}/members/{user_id}", response_model=schemas.MemberResponse)
+async def update_member(
+    project_id: UUID,
+    user_id: UUID,
+    data: schemas.MemberUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a member's role. Only admins can change roles."""
+    project = await service.get_project(db, project_id, current_user)
+    requester_role = await service.get_user_role_in_project(
+        db, project_id, current_user.id
+    )
+    if requester_role != "admin":
+        raise HTTPException(403, "Only admins can change member roles")
+    member = await service.update_member_role(db, project, user_id, data.role, current_user)
+    return _member_to_response(member)
+
+
+@router.delete("/{project_id}/members/{user_id}", status_code=204)
+async def remove_member(
+    project_id: UUID,
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a member from a project. Only admins can remove members."""
+    project = await service.get_project(db, project_id, current_user)
+    requester_role = await service.get_user_role_in_project(
+        db, project_id, current_user.id
+    )
+    if requester_role != "admin":
+        raise HTTPException(403, "Only admins can remove members")
+    await service.remove_member(db, project, user_id, current_user)
