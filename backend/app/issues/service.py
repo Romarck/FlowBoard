@@ -135,8 +135,10 @@ async def get_issues(
     priority: str | None = None,
     assignee_id: UUID | None = None,
     sprint_id: UUID | None = None,
+    label_id: UUID | None = None,
+    search: str | None = None,
 ) -> tuple[list[Issue], int]:
-    """List issues for a project with optional filters."""
+    """List issues for a project with optional filters and search."""
     filters = [Issue.project_id == project_id]
     if type:
         filters.append(Issue.type == type)
@@ -149,15 +151,30 @@ async def get_issues(
     if sprint_id:
         filters.append(Issue.sprint_id == sprint_id)
 
+    # Text search on title and key
+    if search:
+        search_pattern = f"%{search}%"
+        filters.append(
+            (Issue.title.ilike(search_pattern)) | (Issue.key.ilike(search_pattern))
+        )
+
+    q = select(Issue).where(and_(*filters))
+
+    # Join for label filtering if needed
+    if label_id:
+        q = q.join(IssueLabel).where(IssueLabel.label_id == label_id)
+
     count_q = select(func.count(Issue.id)).where(and_(*filters))
+    if label_id:
+        count_q = count_q.select_from(Issue).join(IssueLabel).where(IssueLabel.label_id == label_id)
     total = await db.scalar(count_q) or 0
 
     q = (
-        select(Issue)
-        .where(and_(*filters))
+        q
         .order_by(Issue.position.asc(), Issue.created_at.desc())
         .offset((page - 1) * size)
         .limit(size)
+        .distinct()
     )
     result = await db.execute(q)
     return list(result.scalars().all()), total

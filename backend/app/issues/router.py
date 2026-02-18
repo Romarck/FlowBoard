@@ -123,12 +123,14 @@ async def list_issues(
     priority: str | None = Query(None),
     assignee_id: UUID | None = Query(None),
     sprint_id: UUID | None = Query(None),
+    label_id: UUID | None = Query(None),
+    search: str | None = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     await project_service.get_project(db, project_id, current_user)
     issues, total = await service.get_issues(
-        db, project_id, page, size, type, status_id, priority, assignee_id, sprint_id
+        db, project_id, page, size, type, status_id, priority, assignee_id, sprint_id, label_id, search
     )
     return schemas.IssueListResponse(
         items=[_to_list_item(i) for i in issues],

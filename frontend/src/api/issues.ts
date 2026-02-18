@@ -1,20 +1,34 @@
 import client from './client';
 import type { Issue, CreateIssueRequest, UpdateIssueRequest, MoveIssueRequest } from '../types/issue';
 
+export interface StatusBrief {
+  id: string;
+  name: string;
+  category: string;
+}
+
+export interface UserBrief {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
 export interface IssueListItem {
   id: string;
   project_id: string;
   type: string;
   key: string;
   title: string;
-  status_id: string;
+  status: StatusBrief;
+  status_id?: string; // For backward compatibility
   priority: string;
-  assignee_id: string | null;
-  parent_id: string | null;
+  assignee: UserBrief | null;
+  assignee_id?: string | null; // For backward compatibility
   story_points: number | null;
-  position: number;
+  label_count: number;
   created_at: string;
-  updated_at: string;
+  parent_id?: string | null; // For grouping in backlog
 }
 
 export interface IssueListResponse {
@@ -30,6 +44,8 @@ export interface IssueFilters {
   priority?: string;
   assignee_id?: string;
   sprint_id?: string;
+  label_id?: string;
+  search?: string;
   page?: number;
   size?: number;
 }
