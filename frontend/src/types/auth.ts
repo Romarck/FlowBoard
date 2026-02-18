@@ -8,9 +8,7 @@ export interface User {
   name: string;
   avatar_url: string | null;
   role: UserRole;
-  is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 export interface LoginRequest {
@@ -35,7 +33,6 @@ export interface ResetPasswordRequest {
 
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
   token_type: 'bearer';
 }
 
