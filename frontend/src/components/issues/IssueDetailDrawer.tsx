@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { IssueTypeIcon } from './IssueTypeIcon';
 import { CommentList } from '@/components/comments';
+import { AttachmentList } from '@/components/attachments';
 import { useUpdateIssue } from '@/hooks/useIssues';
 import { useAuthStore } from '@/stores/auth-store';
 import type { Issue } from '@/types/issue';
@@ -303,6 +304,14 @@ export function IssueDetailDrawer({
                   </div>
                 </>
               )}
+
+              {/* Attachments */}
+              <Separator />
+              <AttachmentList
+                projectId={projectId}
+                issueId={issue.id}
+                currentUserId={useAuthStore.getState().user?.id || ''}
+              />
             </div>
           )}
 
