@@ -1,14 +1,19 @@
 import { useState } from 'react';
-import { Search, Bell, Moon, Sun, Menu, LogOut, User as UserIcon } from 'lucide-react';
+import { Search, Moon, Sun, Menu, LogOut, User as UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui-store';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { NotificationBell } from '@/components/notifications';
+import { useWebSocketNotifications } from '@/hooks/useNotifications';
 
 export function TopBar() {
   const { theme, toggleTheme, toggleSidebar } = useUIStore();
   const { user, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Establish WebSocket connection for real-time notifications
+  useWebSocketNotifications();
 
   const handleLogout = () => {
     logout();
@@ -58,15 +63,8 @@ export function TopBar() {
           )}
         </button>
 
-        {/* Notifications placeholder */}
-        <button
-          className="relative rounded p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
-          aria-label="Notifications"
-          disabled
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-        </button>
+        {/* Notifications bell */}
+        <NotificationBell />
 
         {/* User avatar with dropdown */}
         {user && (

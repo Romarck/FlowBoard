@@ -11,6 +11,8 @@ from app.auth.models import User
 from app.issues.models import Issue, IssueType, IssueLabel
 from app.issues.schemas import IssueCreate, IssueUpdate
 from app.projects.models import Project, WorkflowStatus, Label
+from app.notifications.schemas import NotificationCreate
+from app.notifications.service import create_notification
 
 # Hierarchy rules: what types can be parents of what
 VALID_PARENTS = {
@@ -122,6 +124,20 @@ async def create_issue(db: AsyncSession, project_id: UUID, data: IssueCreate, re
 
     await db.commit()
     await db.refresh(issue)
+
+    # Notify assignee if assigned (and different from reporter)
+    if data.assignee_id and str(data.assignee_id) != str(reporter.id):
+        await create_notification(
+            db,
+            NotificationCreate(
+                user_id=data.assignee_id,
+                issue_id=issue.id,
+                type="assigned",
+                title=f"You were assigned to {issue.key}",
+                body=issue.title,
+            ),
+        )
+
     return issue
 
 
@@ -209,7 +225,10 @@ async def get_children(db: AsyncSession, issue_id: UUID) -> list[Issue]:
 async def update_issue(
     db: AsyncSession, issue: Issue, data: IssueUpdate, user: User
 ) -> Issue:
-    """Update issue fields."""
+    """Update issue fields and send notifications for key changes."""
+    # Track if assignee changed
+    old_assignee_id = issue.assignee_id
+
     if data.title is not None:
         issue.title = data.title
     if data.description is not None:
@@ -244,6 +263,20 @@ async def update_issue(
     issue.updated_at = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(issue)
+
+    # Send notification if assignee changed (only notify new assignee if different from old)
+    if data.assignee_id is not None and str(data.assignee_id) != str(old_assignee_id):
+        await create_notification(
+            db,
+            NotificationCreate(
+                user_id=data.assignee_id,
+                issue_id=issue.id,
+                type="assigned",
+                title=f"You were assigned to {issue.key}",
+                body=issue.title,
+            ),
+        )
+
     return issue
 
 

@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.attachments.router import router as attachments_router
 from app.auth.router import router as auth_router
 from app.database import async_session
+from app.notifications.router import router as notifications_router
 from app.projects.router import router as projects_router
 from app.issues.router import router as issues_router
 from app.sprints.router import router as sprints_router
@@ -26,6 +27,7 @@ app.include_router(sprints_router)
 app.include_router(comments_router)
 app.include_router(attachments_router)
 app.include_router(search_router)
+app.include_router(notifications_router)
 
 # Mount static files for uploads
 uploads_dir = Path("uploads")

@@ -9,6 +9,8 @@ from app.auth.models import User
 from app.comments.models import Comment
 from app.comments.schemas import CommentCreate, CommentUpdate
 from app.issues.models import Issue
+from app.notifications.schemas import NotificationCreate
+from app.notifications.service import create_notification
 
 
 async def get_comments(db: AsyncSession, issue_id: UUID) -> list[Comment]:
@@ -30,6 +32,7 @@ async def create_comment(
     """Create a new comment on an issue.
 
     Validates that the issue exists before creating the comment.
+    Sends notifications to the issue assignee and reporter (if not the author).
     """
     # Verify issue exists
     issue = await db.get(Issue, issue_id)
@@ -44,6 +47,34 @@ async def create_comment(
     db.add(comment)
     await db.commit()
     await db.refresh(comment)
+
+    # Notify issue assignee and reporter (unless they are the author)
+    # Assignee notification
+    if issue.assignee_id and str(issue.assignee_id) != str(author.id):
+        await create_notification(
+            db,
+            NotificationCreate(
+                user_id=issue.assignee_id,
+                issue_id=issue.id,
+                type="commented",
+                title=f"New comment on {issue.key}",
+                body=f"{author.name}: {data.content[:100]}..." if len(data.content) > 100 else f"{author.name}: {data.content}",
+            ),
+        )
+
+    # Reporter notification (only if assignee is different)
+    if issue.reporter_id and str(issue.reporter_id) != str(author.id) and issue.reporter_id != issue.assignee_id:
+        await create_notification(
+            db,
+            NotificationCreate(
+                user_id=issue.reporter_id,
+                issue_id=issue.id,
+                type="commented",
+                title=f"New comment on {issue.key}",
+                body=f"{author.name}: {data.content[:100]}..." if len(data.content) > 100 else f"{author.name}: {data.content}",
+            ),
+        )
+
     return comment
 
 

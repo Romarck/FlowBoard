@@ -3,11 +3,22 @@ import { useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { useUIStore } from '@/stores/ui-store';
+import { useNotificationStore } from '@/stores/notification-store';
+import { useUnreadCount } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
 
 export function AppLayout() {
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
   const setSidebarOpen = useUIStore((state) => state.setSidebarOpen);
+  const setUnreadCount = useNotificationStore((state) => state.setUnreadCount);
+  const { data: unreadCountData } = useUnreadCount(true);
+
+  // Load unread count on mount
+  useEffect(() => {
+    if (unreadCountData) {
+      setUnreadCount(unreadCountData.count);
+    }
+  }, [unreadCountData, setUnreadCount]);
 
   // Responsive: collapse sidebar on small screens
   useEffect(() => {
