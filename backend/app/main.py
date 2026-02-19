@@ -17,6 +17,8 @@ from app.sprints.router import router as sprints_router
 from app.comments.router import router as comments_router
 from app.search.router import router as search_router
 
+from app.config import settings
+
 app = FastAPI(title="FlowBoard API", version="0.1.0")
 
 # Register routers
@@ -36,7 +38,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

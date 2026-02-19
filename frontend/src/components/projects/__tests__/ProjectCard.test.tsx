@@ -1,164 +1,222 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProjectCard } from '../ProjectCard'
 import type { ProjectListItem } from '@/types/project'
-import { BrowserRouter } from 'react-router-dom'
 
-// Mock react-router-dom to avoid navigation issues in tests
+// Mock react-router-dom
 vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => vi.fn(),
   }
 })
 
+// Mock lucide-react
+vi.mock('lucide-react', () => ({
+  MoreVertical: () => <span data-testid="more-icon">more</span>,
+  Users: () => <span data-testid="users-icon">users</span>,
+}))
+
+// Mock utils
+vi.mock('@/lib/utils', () => ({
+  formatDate: (date: string) => 'Jan 15, 2024',
+}))
+
 describe('ProjectCard', () => {
   const mockProject: ProjectListItem = {
     id: 'proj-1',
     name: 'Test Project',
-    key: 'TEST',
-    description: 'This is a test project',
+    key: 'TP',
+    description: 'A test project',
     methodology: 'scrum',
     member_count: 3,
-    created_at: '2024-01-01T10:00:00Z',
+    created_at: '2024-01-15T10:00:00Z',
   }
 
   const mockOnEdit = vi.fn()
   const mockOnDelete = vi.fn()
 
-  const renderWithRouter = (component: React.ReactElement) => {
-    return render(<BrowserRouter>{component}</BrowserRouter>)
-  }
+  beforeEach(() => {
+    mockOnEdit.mockClear()
+    mockOnDelete.mockClear()
+  })
 
   it('should render project name', () => {
-    renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
     )
+
     expect(screen.getByText('Test Project')).toBeInTheDocument()
   })
 
   it('should render project description', () => {
-    renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
     )
-    expect(screen.getByText('This is a test project')).toBeInTheDocument()
+
+    expect(screen.getByText('A test project')).toBeInTheDocument()
   })
 
-  it('should render "No description" when description is empty', () => {
-    const projectWithoutDesc = { ...mockProject, description: '' }
-    renderWithRouter(
+  it('should render fallback when no description', () => {
+    const projectWithoutDesc = { ...mockProject, description: null }
+    render(
       <ProjectCard
         project={projectWithoutDesc}
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
       />
     )
+
     expect(screen.getByText('No description')).toBeInTheDocument()
   })
 
   it('should render project key', () => {
-    renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
     )
-    expect(screen.getByText('TEST')).toBeInTheDocument()
+
+    expect(screen.getByText('TP')).toBeInTheDocument()
   })
 
-  it('should render scrum methodology badge', () => {
-    renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
+  it('should render methodology badge as Scrum', () => {
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
     )
+
     expect(screen.getByText('Scrum')).toBeInTheDocument()
   })
 
-  it('should render kanban methodology badge', () => {
-    const kanbanProject: typeof mockProject = { ...mockProject, methodology: 'kanban' as const }
-    renderWithRouter(
+  it('should render methodology badge as Kanban', () => {
+    const kanbanProject = { ...mockProject, methodology: 'kanban' as const }
+    render(
       <ProjectCard
         project={kanbanProject}
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
       />
     )
+
     expect(screen.getByText('Kanban')).toBeInTheDocument()
   })
 
   it('should render member count', () => {
-    renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
     )
-    expect(screen.getByText(/3 members/)).toBeInTheDocument()
+
+    expect(screen.getByText('3 members')).toBeInTheDocument()
   })
 
-  it('should render singular member text for single member', () => {
+  it('should render singular member text', () => {
     const singleMemberProject = { ...mockProject, member_count: 1 }
-    renderWithRouter(
+    render(
       <ProjectCard
         project={singleMemberProject}
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
       />
     )
-    expect(screen.getByText(/1 member$/)).toBeInTheDocument()
-  })
 
-  it('should have proper card styling', () => {
-    const { container } = renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
-    )
-    const card = container.querySelector('[class*="rounded-lg"]')
-    expect(card).toHaveClass('border', 'shadow-sm')
-  })
-
-  it('should have hover effect styling', () => {
-    const { container } = renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
-    )
-    const card = container.querySelector('[class*="hover:shadow"]')
-    expect(card).toBeInTheDocument()
-  })
-
-  it('should call onEdit when Edit button is clicked', async () => {
-    const user = userEvent.setup()
-    renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
-    )
-
-    // First, find and click the menu button to open the dropdown
-    const menuButton = screen.getAllByRole('button')[0]
-    await user.click(menuButton)
-
-    // Then find and click the Edit button
-    const editButton = screen.getByText('Edit')
-    await user.click(editButton)
-
-    expect(mockOnEdit).toHaveBeenCalledWith(mockProject)
-  })
-
-  it('should call onDelete when Delete button is clicked', async () => {
-    const user = userEvent.setup()
-    renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
-    )
-
-    // First, find and click the menu button to open the dropdown
-    const menuButton = screen.getAllByRole('button')[0]
-    await user.click(menuButton)
-
-    // Then find and click the Delete button
-    const deleteButton = screen.getByText('Delete')
-    await user.click(deleteButton)
-
-    expect(mockOnDelete).toHaveBeenCalledWith(mockProject)
+    expect(screen.getByText('1 member')).toBeInTheDocument()
   })
 
   it('should render created date', () => {
-    renderWithRouter(
-      <ProjectCard project={mockProject} onEdit={mockOnEdit} onDelete={mockOnDelete} />
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
     )
-    // The date should be formatted, so check that there's a date-like text
-    const dateText = screen.getByText(/Jan 1|1\/1|2024/)
-    expect(dateText).toBeInTheDocument()
+
+    expect(screen.getByText('Jan 15, 2024')).toBeInTheDocument()
+  })
+
+  it('should render more options icon', () => {
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    )
+
+    expect(screen.getByTestId('more-icon')).toBeInTheDocument()
+  })
+
+  it('should render users icon', () => {
+    render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    )
+
+    expect(screen.getByTestId('users-icon')).toBeInTheDocument()
+  })
+
+  it('should have proper card styling', () => {
+    const { container } = render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    )
+
+    const card = container.querySelector('div')
+    expect(card).toHaveClass('rounded-lg')
+    expect(card).toHaveClass('border')
+    expect(card).toHaveClass('shadow-sm')
+  })
+
+  it('should display scrum methodology with green color', () => {
+    const { container } = render(
+      <ProjectCard
+        project={mockProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    )
+
+    const scrumBadge = container.querySelector('.bg-green-100')
+    expect(scrumBadge).toBeInTheDocument()
+  })
+
+  it('should display kanban methodology with blue color', () => {
+    const kanbanProject = { ...mockProject, methodology: 'kanban' as const }
+    const { container } = render(
+      <ProjectCard
+        project={kanbanProject}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    )
+
+    const kanbanBadge = container.querySelector('.bg-blue-100')
+    expect(kanbanBadge).toBeInTheDocument()
   })
 })

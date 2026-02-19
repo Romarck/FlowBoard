@@ -24,6 +24,7 @@ from app.auth.service import (
     reset_password,
 )
 from app.auth.utils import create_access_token, create_refresh_token, decode_token
+from app.config import settings
 from app.database import get_db
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -62,7 +63,7 @@ async def login(data: LoginRequest, response: Response, db: AsyncSession = Depen
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,  # Set True in production (requires HTTPS)
+        secure=not settings.DEBUG,  # True in production (requires HTTPS)
         samesite="lax",
         max_age=7 * 24 * 3600,
         path="/api/v1/auth",

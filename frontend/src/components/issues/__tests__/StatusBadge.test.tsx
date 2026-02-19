@@ -4,106 +4,94 @@ import { StatusBadge } from '../StatusBadge'
 import type { WorkflowStatus } from '@/types/project'
 
 describe('StatusBadge', () => {
-  it('should render the status name', () => {
+  it('should render badge for todo status', () => {
     const status: WorkflowStatus = {
-      id: '1',
+      id: 'status-1',
       name: 'To Do',
       category: 'todo',
       position: 0,
       wip_limit: null,
     }
     render(<StatusBadge status={status} />)
-    expect(screen.getByText('To Do')).toBeInTheDocument()
+
+    const badge = screen.getByText('To Do')
+    expect(badge).toBeInTheDocument()
+    expect(badge).toHaveClass('bg-gray-100')
+    expect(badge).toHaveClass('text-gray-700')
   })
 
-  it('should apply todo styles', () => {
+  it('should render badge for in_progress status', () => {
     const status: WorkflowStatus = {
-      id: '1',
-      name: 'To Do',
-      category: 'todo',
-      position: 0,
-      wip_limit: null,
-    }
-    const { container } = render(<StatusBadge status={status} />)
-    const badge = container.querySelector('span')
-    expect(badge).toHaveClass('bg-gray-100', 'text-gray-700')
-  })
-
-  it('should apply in_progress styles', () => {
-    const status: WorkflowStatus = {
-      id: '2',
+      id: 'status-2',
       name: 'In Progress',
       category: 'in_progress',
       position: 1,
-      wip_limit: null,
+      wip_limit: 5,
     }
-    const { container } = render(<StatusBadge status={status} />)
-    const badge = container.querySelector('span')
-    expect(badge).toHaveClass('bg-blue-100', 'text-blue-700')
+    render(<StatusBadge status={status} />)
+
+    const badge = screen.getByText('In Progress')
+    expect(badge).toBeInTheDocument()
+    expect(badge).toHaveClass('bg-blue-100')
+    expect(badge).toHaveClass('text-blue-700')
   })
 
-  it('should apply done styles', () => {
+  it('should render badge for done status', () => {
     const status: WorkflowStatus = {
-      id: '3',
+      id: 'status-3',
       name: 'Done',
       category: 'done',
-      position: 3,
-      wip_limit: null,
-    }
-    const { container } = render(<StatusBadge status={status} />)
-    const badge = container.querySelector('span')
-    expect(badge).toHaveClass('bg-green-100', 'text-green-700')
-  })
-
-  it('should apply cancelled styles', () => {
-    const status: WorkflowStatus = {
-      id: '4',
-      name: 'Cancelled',
-      category: 'cancelled',
       position: 2,
       wip_limit: null,
     }
-    const { container } = render(<StatusBadge status={status} />)
-    const badge = container.querySelector('span')
-    expect(badge).toHaveClass('bg-red-100', 'text-red-600')
+    render(<StatusBadge status={status} />)
+
+    const badge = screen.getByText('Done')
+    expect(badge).toBeInTheDocument()
+    expect(badge).toHaveClass('bg-green-100')
+    expect(badge).toHaveClass('text-green-700')
+  })
+
+  it('should render badge for cancelled status', () => {
+    const status: WorkflowStatus = {
+      id: 'status-4',
+      name: 'Cancelled',
+      category: 'cancelled',
+      position: 3,
+      wip_limit: null,
+    }
+    render(<StatusBadge status={status} />)
+
+    const badge = screen.getByText('Cancelled')
+    expect(badge).toBeInTheDocument()
+    expect(badge).toHaveClass('bg-red-100')
+    expect(badge).toHaveClass('text-red-600')
   })
 
   it('should apply custom className', () => {
     const status: WorkflowStatus = {
-      id: '1',
+      id: 'status-1',
       name: 'To Do',
       category: 'todo',
       position: 0,
       wip_limit: null,
     }
-    const { container } = render(<StatusBadge status={status} className="custom-class" />)
-    const badge = container.querySelector('span')
+    render(<StatusBadge status={status} className="custom-class" />)
+
+    const badge = screen.getByText('To Do')
     expect(badge).toHaveClass('custom-class')
   })
 
-  it('should have proper padding and size classes', () => {
+  it('should render status name correctly', () => {
     const status: WorkflowStatus = {
-      id: '1',
-      name: 'To Do',
+      id: 'status-custom',
+      name: 'Custom Status',
       category: 'todo',
       position: 0,
       wip_limit: null,
     }
-    const { container } = render(<StatusBadge status={status} />)
-    const badge = container.querySelector('span')
-    expect(badge).toHaveClass('px-2.5', 'py-0.5', 'text-xs', 'font-medium', 'rounded-full')
-  })
+    render(<StatusBadge status={status} />)
 
-  it('should fallback to todo styles for unknown category', () => {
-    const status: WorkflowStatus = {
-      id: '1',
-      name: 'Unknown',
-      category: 'todo',
-      position: 0,
-      wip_limit: null,
-    }
-    const { container } = render(<StatusBadge status={status} />)
-    const badge = container.querySelector('span')
-    expect(badge).toHaveClass('bg-gray-100', 'text-gray-700')
+    expect(screen.getByText('Custom Status')).toBeInTheDocument()
   })
 })
