@@ -25,15 +25,15 @@ export function BacklogFilters({ filters, onFiltersChange, members }: BacklogFil
   };
 
   const handleTypeChange = (type: string) => {
-    onFiltersChange({ ...filters, type });
+    onFiltersChange({ ...filters, type: type === '__all__' ? '' : type });
   };
 
   const handlePriorityChange = (priority: string) => {
-    onFiltersChange({ ...filters, priority });
+    onFiltersChange({ ...filters, priority: priority === '__all__' ? '' : priority });
   };
 
   const handleAssigneeChange = (assigneeId: string) => {
-    onFiltersChange({ ...filters, assigneeId });
+    onFiltersChange({ ...filters, assigneeId: assigneeId === '__all__' ? '' : assigneeId });
   };
 
   const handleClearFilters = () => {
@@ -54,12 +54,12 @@ export function BacklogFilters({ filters, onFiltersChange, members }: BacklogFil
       </div>
 
       {/* Type Filter */}
-      <Select value={filters.type} onValueChange={handleTypeChange}>
+      <Select value={filters.type || '__all__'} onValueChange={handleTypeChange}>
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Type" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Types</SelectItem>
+          <SelectItem value="__all__">All Types</SelectItem>
           <SelectItem value="epic">Epic</SelectItem>
           <SelectItem value="story">Story</SelectItem>
           <SelectItem value="task">Task</SelectItem>
@@ -69,12 +69,12 @@ export function BacklogFilters({ filters, onFiltersChange, members }: BacklogFil
       </Select>
 
       {/* Priority Filter */}
-      <Select value={filters.priority} onValueChange={handlePriorityChange}>
+      <Select value={filters.priority || '__all__'} onValueChange={handlePriorityChange}>
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Priority" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Priorities</SelectItem>
+          <SelectItem value="__all__">All Priorities</SelectItem>
           <SelectItem value="critical">Critical</SelectItem>
           <SelectItem value="high">High</SelectItem>
           <SelectItem value="medium">Medium</SelectItem>
@@ -83,12 +83,12 @@ export function BacklogFilters({ filters, onFiltersChange, members }: BacklogFil
       </Select>
 
       {/* Assignee Filter */}
-      <Select value={filters.assigneeId} onValueChange={handleAssigneeChange}>
+      <Select value={filters.assigneeId || '__all__'} onValueChange={handleAssigneeChange}>
         <SelectTrigger className="w-[150px]">
           <SelectValue placeholder="Assignee" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">All Assignees</SelectItem>
+          <SelectItem value="__all__">All Assignees</SelectItem>
           {members.map((member) => (
             <SelectItem key={member.user_id} value={member.user_id}>
               {member.name}

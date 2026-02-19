@@ -7,6 +7,8 @@ import {
   DragStartEvent,
   DragOverEvent,
 } from '@dnd-kit/core';
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { KanbanColumn } from '@/components/board';
 import { IssueDetailDrawer } from '@/components/issues/IssueDetailDrawer';
 import { CreateIssueDialog } from '@/components/issues/CreateIssueDialog';
@@ -26,6 +28,7 @@ export function BoardPage() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [createIssueOpen, setCreateIssueOpen] = useState(false);
 
   // Local state for optimistic updates
   const [optimisticIssues, setOptimisticIssues] = useState<IssueListItem[]>([]);
@@ -170,7 +173,10 @@ export function BoardPage() {
               {project?.name || 'Board'}
             </h1>
           </div>
-          <CreateIssueDialog projectId={projectId} projectMembers={members || []} />
+          <Button type="button" className="gap-2" onClick={() => setCreateIssueOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New Issue
+          </Button>
         </div>
 
         {/* Filters Bar (placeholder) */}
@@ -201,6 +207,14 @@ export function BoardPage() {
           </div>
         </DndContext>
       </div>
+
+      {/* Create Issue Dialog */}
+      <CreateIssueDialog
+        projectId={projectId}
+        projectMembers={members || []}
+        isOpen={createIssueOpen}
+        onOpenChange={setCreateIssueOpen}
+      />
 
       {/* Issue Detail Drawer */}
       {drawerOpen && (
