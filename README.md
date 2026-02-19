@@ -4,22 +4,31 @@ Agile Project Management System -- a self-hosted, open-source alternative inspir
 
 ## Features (MVP)
 
-- Kanban and Scrum boards with drag-and-drop
-- Issue hierarchy (Epic > Story > Task > Bug > Subtask)
-- Sprint management with burndown charts
-- Backlog grooming and prioritization
-- Real-time updates via WebSocket
-- Role-based access control
+- **Auth & RBAC** — Register, login, JWT refresh tokens, roles (Admin, Project Manager, Developer, Viewer)
+- **Project Management** — CRUD de projetos, convite de membros, workflow de status customizável, labels
+- **Issue Hierarchy** — Epic > Story > Task > Bug > Subtask com numeração automática (FB-1, FB-2...)
+- **Kanban Board** — Drag-and-drop entre colunas e reordenação via @dnd-kit
+- **Backlog Management** — Agrupamento por Epic, filtros, criação inline
+- **Sprint Management** — Ciclo planning → active → completed, métricas de sprint
+- **Comments & Activity** — Comentários em issues com edição/exclusão e timestamps relativos
+- **File Attachments** — Upload de arquivos com preview de imagens
+- **Global Search & Filters** — Busca fulltext, filtros avançados, filtros salvos
+- **Dashboard & Metrics** — Métricas por projeto, distribuição por tipo/prioridade, workload da equipe
+- **Real-time Notifications** — WebSocket por usuário, badge de não-lidas, mark as read
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + TypeScript (Vite) |
+| Frontend | React 18 + TypeScript (Vite) + Tailwind CSS v4 |
+| State / Data | Zustand + TanStack React Query v5 |
+| Drag & Drop | @dnd-kit/core + @dnd-kit/sortable |
 | Backend | FastAPI (Python 3.11+) |
 | Database | PostgreSQL 15 |
 | ORM | SQLAlchemy 2.0 (async) + Alembic |
 | Auth | JWT (access + refresh tokens) |
+| Real-time | WebSocket nativo FastAPI |
+| Testing | Vitest + React Testing Library (frontend) / pytest (backend) |
 
 ## Prerequisites
 
@@ -70,74 +79,131 @@ Agile Project Management System -- a self-hosted, open-source alternative inspir
 
 ```
 flowboard/
-├── backend/           # FastAPI application
-│   ├── app/           # Application code
-│   ├── tests/         # Python tests
-│   ├── alembic/       # Database migrations
-│   ├── pyproject.toml # Python dependencies (Poetry)
+├── backend/
+│   ├── app/
+│   │   ├── auth/              # JWT auth, login, register, refresh
+│   │   ├── projects/          # Projects, members, workflow statuses, labels, metrics
+│   │   ├── issues/            # Issues CRUD, move, history, relations
+│   │   ├── sprints/           # Sprint lifecycle (planning → active → completed)
+│   │   ├── comments/          # Issue comments
+│   │   ├── attachments/       # File upload/download
+│   │   ├── notifications/     # WebSocket notifications
+│   │   ├── search/            # Global search, saved filters
+│   │   └── common/            # Shared permissions, deps
+│   ├── tests/                 # 106 pytest tests (all modules)
+│   ├── alembic/               # Database migrations
+│   ├── pyproject.toml
 │   └── Dockerfile
-├── frontend/          # React SPA
-│   ├── src/           # TypeScript source
-│   ├── package.json   # Node dependencies
-│   ├── vite.config.ts # Vite configuration
+├── frontend/
+│   ├── src/
+│   │   ├── api/               # Axios API clients por módulo
+│   │   ├── components/        # UI components (board/, backlog/, sprints/, issues/, dashboard/, comments/, notifications/)
+│   │   ├── hooks/             # React Query hooks por módulo
+│   │   ├── pages/             # Pages (auth/, projects/, board/, backlog/, sprints/, dashboard/)
+│   │   ├── store/             # Zustand stores (auth)
+│   │   ├── types/             # TypeScript interfaces
+│   │   └── utils/             # date.ts e outros utilitários
+│   ├── package.json
+│   ├── vite.config.ts         # Vite + Vitest config
 │   └── Dockerfile
-├── docker-compose.yml # Development environment
-├── Makefile           # Development shortcuts
-└── .github/workflows/ # CI pipeline
+├── docker-compose.yml
+├── Makefile
+└── .github/workflows/         # CI pipeline
 ```
 
 ## Development
 
-### Backend Development
+### Backend
 
-The backend auto-reloads on file changes (via uvicorn `--reload`).
+O backend reinicia automaticamente em mudanças de arquivo (uvicorn `--reload`).
 
 ```bash
-# Run backend tests
-make test
+# Rodar todos os testes (106 testes)
+cd backend
+python -m pytest tests/ -v
 
-# Run linter
-make lint
+# Rodar testes com cobertura
+python -m pytest tests/ --cov=app --cov-report=term-missing
 
-# Run database migrations
+# Linter
+ruff check app/
+
+# Migrations
 make migrate
 ```
 
-### Frontend Development
+### Frontend
 
-The frontend uses Vite HMR for instant updates during development.
+O frontend usa Vite HMR para hot-reload instantâneo.
+
+```bash
+cd frontend
+
+# Servidor de desenvolvimento
+npm run dev
+
+# Rodar testes (93 testes — Vitest + React Testing Library)
+npm test
+
+# Testes com relatório de cobertura
+npm run test:coverage
+
+# UI interativa do Vitest
+npm run test:ui
+
+# Type checking
+npm run typecheck
+
+# Linter
+npm run lint
+```
 
 ### Database
 
-PostgreSQL runs on port 5432 with the following defaults:
+PostgreSQL roda na porta 5432 com os seguintes defaults:
 
 - Database: `flowboard`
 - User: `flowboard`
 - Password: `flowboard_dev`
 
-Connect directly:
+Conectar diretamente:
 
 ```bash
 docker compose exec db psql -U flowboard -d flowboard
 ```
 
+### Seed de Dados
+
+```bash
+docker compose exec backend python -m app.seed
+```
+
+## API Docs
+
+Com os serviços rodando, a documentação Swagger está disponível em:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **OpenAPI JSON**: http://localhost:8000/openapi.json
+
 ## CI/CD
 
-GitHub Actions runs on every push and pull request to `main`:
+GitHub Actions roda em todo push e pull request para `main`:
 
-- Backend: Ruff lint + pytest
-- Frontend: ESLint + TypeScript type checking
+- **Backend**: Ruff lint + pytest (106 testes)
+- **Frontend**: ESLint + TypeScript type checking + Vitest (93 testes)
 
 ## Contributing
 
-1. Create a feature branch from `main`
-2. Make your changes following the project conventions
-3. Ensure `make lint` and `make test` pass
-4. Open a pull request
+1. Crie uma branch a partir de `main`
+2. Siga os padrões do projeto (service layer no backend, React Query no frontend)
+3. Escreva testes para novas features
+4. Garanta que `make lint` e `make test` passam
+5. Abra um pull request
 
 ## Architecture
 
-See `docs/architecture-flowboard.md` for the full architecture document.
+Veja `docs/architecture-flowboard.md` para o documento de arquitetura completo (ADRs, schema SQL, component tree).
 
 ## License
 
