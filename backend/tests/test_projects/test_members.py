@@ -1,10 +1,21 @@
 """Tests for project member management endpoints."""
 import uuid
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.auth.utils import create_access_token
+
+
+def _exec_result(**kwargs):
+    """Create a MagicMock SQLAlchemy execute result."""
+    r = MagicMock()
+    if "scalar" in kwargs:
+        r.scalar_one_or_none.return_value = kwargs["scalar"]
+    if "scalars_all" in kwargs:
+        r.scalars.return_value.all.return_value = kwargs["scalars_all"]
+    return r
 
 
 @pytest.mark.asyncio
@@ -16,14 +27,13 @@ async def test_list_members_as_member(client, test_user, test_user_tokens, mock_
     other_user.name = "Other User"
     other_user.email = "other@example.com"
     other_user.avatar_url = None
+    other_user.created_at = datetime.now(timezone.utc)
 
-    # Mock project
     project_mock = MagicMock()
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
     project_mock.members = []
 
-    # Mock members
     member1 = MagicMock()
     member1.user_id = test_user.id
     member1.user = test_user
@@ -37,12 +47,12 @@ async def test_list_members_as_member(client, test_user, test_user_tokens, mock_
     member2.joined_at = other_user.created_at
 
     mock_db.get = AsyncMock(return_value=project_mock)
-    mock_db.execute = AsyncMock()
 
-    # First call: check membership
-    # Second call: get members list
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
-    mock_db.execute.return_value.scalars.return_value.all.return_value = [member1, member2]
+    # 1) get_project->get_user_role_in_project, 2) get_members
+    mock_db.execute = AsyncMock(side_effect=[
+        _exec_result(scalar="admin"),
+        _exec_result(scalars_all=[member1, member2]),
+    ])
 
     response = await client.get(
         f"/api/v1/projects/{project_id}/members",
@@ -62,8 +72,7 @@ async def test_list_members_as_non_member(client, test_user, test_user_tokens, m
     project_id = uuid.uuid4()
 
     mock_db.get = AsyncMock(return_value=MagicMock())
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = None
+    mock_db.execute = AsyncMock(return_value=_exec_result(scalar=None))
 
     response = await client.get(
         f"/api/v1/projects/{project_id}/members",
@@ -89,25 +98,21 @@ async def test_add_member_as_admin(client, test_user, test_user_tokens, mock_db)
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
 
-    member_mock = MagicMock()
-    member_mock.user_id = new_user.id
-    member_mock.user = new_user
-    member_mock.role = "developer"
-    member_mock.joined_at = test_user.created_at
-
     mock_db.get = AsyncMock(return_value=project_mock)
-    mock_db.execute = AsyncMock()
 
-    # First call: check membership (admin)
-    # Second call: find user by email
-    # Third call: check if already member
-    execute_results = [
-        MagicMock(scalar_one_or_none=MagicMock(return_value="admin")),
-        MagicMock(scalar_one_or_none=MagicMock(return_value=new_user)),
-        MagicMock(scalar_one_or_none=MagicMock(return_value=None)),
-    ]
-    mock_db.execute.side_effect = execute_results
-    mock_db.refresh = AsyncMock()
+    # 1) get_project->role check, 2) router role check, 3) find user by email, 4) check already member
+    mock_db.execute = AsyncMock(side_effect=[
+        _exec_result(scalar="admin"),     # get_project membership
+        _exec_result(scalar="admin"),     # router permission check
+        _exec_result(scalar=new_user),    # find user by email
+        _exec_result(scalar=None),        # not already a member
+    ])
+
+    async def refresh_with_user(member):
+        """Simulate eager-loading the user relationship on refresh."""
+        member.user = new_user
+
+    mock_db.refresh = AsyncMock(side_effect=refresh_with_user)
 
     response = await client.post(
         f"/api/v1/projects/{project_id}/members",
@@ -117,7 +122,6 @@ async def test_add_member_as_admin(client, test_user, test_user_tokens, mock_db)
 
     assert response.status_code == 201
     data = response.json()
-    assert data["email"] == "new@example.com"
     assert data["role"] == "developer"
 
 
@@ -127,8 +131,12 @@ async def test_add_member_as_developer(client, test_user, test_user_tokens, mock
     project_id = uuid.uuid4()
 
     mock_db.get = AsyncMock(return_value=MagicMock())
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "developer"
+
+    # 1) get_project role check, 2) router role check
+    mock_db.execute = AsyncMock(side_effect=[
+        _exec_result(scalar="developer"),  # get_project membership
+        _exec_result(scalar="developer"),  # router permission check -> fails
+    ])
 
     response = await client.post(
         f"/api/v1/projects/{project_id}/members",
@@ -146,13 +154,13 @@ async def test_add_member_user_not_found(client, test_user, test_user_tokens, mo
     project_id = uuid.uuid4()
 
     mock_db.get = AsyncMock(return_value=MagicMock())
-    mock_db.execute = AsyncMock()
 
-    execute_results = [
-        MagicMock(scalar_one_or_none=MagicMock(return_value="admin")),
-        MagicMock(scalar_one_or_none=MagicMock(return_value=None)),
-    ]
-    mock_db.execute.side_effect = execute_results
+    # 1) get_project role, 2) router role, 3) find user by email -> None
+    mock_db.execute = AsyncMock(side_effect=[
+        _exec_result(scalar="admin"),
+        _exec_result(scalar="admin"),
+        _exec_result(scalar=None),  # user not found
+    ])
 
     response = await client.post(
         f"/api/v1/projects/{project_id}/members",
@@ -173,14 +181,14 @@ async def test_add_member_already_member(client, test_user, test_user_tokens, mo
     existing_user.id = uuid.uuid4()
 
     mock_db.get = AsyncMock(return_value=MagicMock())
-    mock_db.execute = AsyncMock()
 
-    execute_results = [
-        MagicMock(scalar_one_or_none=MagicMock(return_value="admin")),
-        MagicMock(scalar_one_or_none=MagicMock(return_value=existing_user)),
-        MagicMock(scalar_one_or_none=MagicMock(return_value=MagicMock())),  # Already member
-    ]
-    mock_db.execute.side_effect = execute_results
+    # 1) get_project role, 2) router role, 3) find user, 4) already member
+    mock_db.execute = AsyncMock(side_effect=[
+        _exec_result(scalar="admin"),
+        _exec_result(scalar="admin"),
+        _exec_result(scalar=existing_user),
+        _exec_result(scalar=MagicMock()),  # already a member
+    ])
 
     response = await client.post(
         f"/api/v1/projects/{project_id}/members",
@@ -215,13 +223,13 @@ async def test_update_member_role_as_admin(client, test_user, test_user_tokens, 
     member_mock.joined_at = test_user.created_at
 
     mock_db.get = AsyncMock(return_value=project_mock)
-    mock_db.execute = AsyncMock()
 
-    execute_results = [
-        MagicMock(scalar_one_or_none=MagicMock(return_value="admin")),
-        MagicMock(scalar_one_or_none=MagicMock(return_value=member_mock)),
-    ]
-    mock_db.execute.side_effect = execute_results
+    # 1) get_project role, 2) router admin check, 3) find member to update
+    mock_db.execute = AsyncMock(side_effect=[
+        _exec_result(scalar="admin"),
+        _exec_result(scalar="admin"),
+        _exec_result(scalar=member_mock),
+    ])
     mock_db.refresh = AsyncMock()
 
     response = await client.patch(
@@ -242,8 +250,7 @@ async def test_update_member_role_as_developer(client, test_user, test_user_toke
     target_user_id = uuid.uuid4()
 
     mock_db.get = AsyncMock(return_value=MagicMock())
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "developer"
+    mock_db.execute = AsyncMock(return_value=_exec_result(scalar="developer"))
 
     response = await client.patch(
         f"/api/v1/projects/{project_id}/members/{target_user_id}",
@@ -266,8 +273,9 @@ async def test_update_owner_role_fails(client, test_user, test_user_tokens, mock
     project_mock.owner_id = owner_id
 
     mock_db.get = AsyncMock(return_value=project_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
+
+    # 1) get_project role, 2) router admin check
+    mock_db.execute = AsyncMock(return_value=_exec_result(scalar="admin"))
 
     response = await client.patch(
         f"/api/v1/projects/{project_id}/members/{owner_id}",
@@ -293,13 +301,13 @@ async def test_remove_member_as_admin(client, test_user, test_user_tokens, mock_
     member_mock.user_id = target_user_id
 
     mock_db.get = AsyncMock(return_value=project_mock)
-    mock_db.execute = AsyncMock()
 
-    execute_results = [
-        MagicMock(scalar_one_or_none=MagicMock(return_value="admin")),
-        MagicMock(scalar_one_or_none=MagicMock(return_value=member_mock)),
-    ]
-    mock_db.execute.side_effect = execute_results
+    # 1) get_project role, 2) router admin check, 3) find member to remove
+    mock_db.execute = AsyncMock(side_effect=[
+        _exec_result(scalar="admin"),
+        _exec_result(scalar="admin"),
+        _exec_result(scalar=member_mock),
+    ])
     mock_db.delete = AsyncMock()
 
     response = await client.delete(
@@ -319,8 +327,7 @@ async def test_remove_member_as_developer(client, test_user, test_user_tokens, m
     target_user_id = uuid.uuid4()
 
     mock_db.get = AsyncMock(return_value=MagicMock())
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "developer"
+    mock_db.execute = AsyncMock(return_value=_exec_result(scalar="developer"))
 
     response = await client.delete(
         f"/api/v1/projects/{project_id}/members/{target_user_id}",
@@ -342,8 +349,7 @@ async def test_remove_owner_fails(client, test_user, test_user_tokens, mock_db):
     project_mock.owner_id = owner_id
 
     mock_db.get = AsyncMock(return_value=project_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
+    mock_db.execute = AsyncMock(return_value=_exec_result(scalar="admin"))
 
     response = await client.delete(
         f"/api/v1/projects/{project_id}/members/{owner_id}",

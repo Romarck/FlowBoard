@@ -56,8 +56,17 @@ async def test_upload_image_success(mock_db, test_issue_id, test_user, tmp_path)
     attachment.uploader = test_user
 
     mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
     mock_db.add = MagicMock()
+
+    from datetime import datetime, timezone
+
+    async def refresh_attachment(obj):
+        """Simulate DB refresh: set id, created_at and uploader."""
+        obj.id = uuid.uuid4()
+        obj.created_at = datetime.now(timezone.utc)
+        obj.uploader = test_user
+
+    mock_db.refresh = AsyncMock(side_effect=refresh_attachment)
 
     with patch("app.attachments.service.Path") as mock_path:
         mock_path_instance = MagicMock()
@@ -82,11 +91,14 @@ async def test_upload_image_success(mock_db, test_issue_id, test_user, tmp_path)
 @pytest.mark.asyncio
 async def test_upload_too_large_fails(mock_db, test_issue_id, test_user):
     """Test that uploading a file larger than max size fails."""
-    large_content = b"x" * (settings.MAX_FILE_SIZE + 1000)
+    chunk_size = 1024 * 64  # 64KB chunks
+    # Build enough chunks to exceed MAX_FILE_SIZE
+    num_chunks = (settings.MAX_FILE_SIZE // chunk_size) + 2
+    chunks = [b"x" * chunk_size for _ in range(num_chunks)]
     file = MagicMock()
-    file.filename = "large.bin"
-    file.content_type = "application/octet-stream"
-    file.read = AsyncMock(side_effect=[large_content[:1024 * 64], large_content[1024 * 64 : 1024 * 128]])
+    file.filename = "large.png"
+    file.content_type = "image/png"
+    file.read = AsyncMock(side_effect=chunks)
 
     from fastapi import HTTPException
 

@@ -7,6 +7,21 @@ import pytest
 from app.auth.utils import create_access_token
 
 
+def _mock_execute_result(**kwargs):
+    """Create a MagicMock that behaves like an SQLAlchemy execute result.
+
+    Supports:
+        scalar_one_or_none=<value>
+        scalars_all=<list>
+    """
+    result = MagicMock()
+    if "scalar_one_or_none" in kwargs:
+        result.scalar_one_or_none.return_value = kwargs["scalar_one_or_none"]
+    if "scalars_all" in kwargs:
+        result.scalars.return_value.all.return_value = kwargs["scalars_all"]
+    return result
+
+
 @pytest.mark.asyncio
 async def test_list_statuses_as_member(client, test_user, test_user_tokens, mock_db):
     """Test listing statuses returns 200 with all 4 default statuses."""
@@ -19,48 +34,30 @@ async def test_list_statuses_as_member(client, test_user, test_user_tokens, mock
     project_mock.members = []
 
     # Mock statuses
-    status1 = MagicMock()
-    status1.id = uuid.uuid4()
-    status1.name = "To Do"
-    status1.category.value = "todo"
-    status1.position = 0
-    status1.wip_limit = None
+    statuses = []
+    for name, cat_val, pos in [
+        ("To Do", "todo", 0),
+        ("In Progress", "in_progress", 1),
+        ("In Review", "in_progress", 2),
+        ("Done", "done", 3),
+    ]:
+        s = MagicMock()
+        s.id = uuid.uuid4()
+        s.name = name
+        s.category.value = cat_val
+        s.position = pos
+        s.wip_limit = None
+        statuses.append(s)
 
-    status2 = MagicMock()
-    status2.id = uuid.uuid4()
-    status2.name = "In Progress"
-    status2.category.value = "in_progress"
-    status2.position = 1
-    status2.wip_limit = None
+    # db.get returns project (for get_project verification)
+    mock_db.get = AsyncMock(return_value=project_mock)
 
-    status3 = MagicMock()
-    status3.id = uuid.uuid4()
-    status3.name = "In Review"
-    status3.category.value = "in_progress"
-    status3.position = 2
-    status3.wip_limit = None
-
-    status4 = MagicMock()
-    status4.id = uuid.uuid4()
-    status4.name = "Done"
-    status4.category.value = "done"
-    status4.position = 3
-    status4.wip_limit = None
-
-    # Mock get for project
-    async def get_mock(model, project_id):
-        if model == type(project_mock):
-            return project_mock
-        return None
-
-    mock_db.get = AsyncMock(side_effect=get_mock)
-
-    # Mock execute for membership check
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
-    mock_db.execute.return_value.scalars.return_value.all.return_value = [
-        status1, status2, status3, status4
-    ]
+    # db.execute is called twice:
+    # 1) get_user_role_in_project -> scalar_one_or_none
+    # 2) get_statuses -> scalars().all()
+    role_result = _mock_execute_result(scalar_one_or_none="admin")
+    statuses_result = _mock_execute_result(scalars_all=statuses)
+    mock_db.execute = AsyncMock(side_effect=[role_result, statuses_result])
 
     response = await client.get(
         f"/api/v1/projects/{project_id}/statuses",
@@ -81,9 +78,13 @@ async def test_list_statuses_as_non_member(client, test_user, test_user_tokens, 
     """Test listing statuses returns 403 for non-members."""
     project_id = uuid.uuid4()
 
-    mock_db.get = AsyncMock(return_value=None)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = None
+    project_mock = MagicMock()
+    project_mock.id = project_id
+    mock_db.get = AsyncMock(return_value=project_mock)
+
+    # Role check returns None (not a member)
+    role_result = _mock_execute_result(scalar_one_or_none=None)
+    mock_db.execute = AsyncMock(return_value=role_result)
 
     response = await client.get(
         f"/api/v1/projects/{project_id}/statuses",
@@ -98,21 +99,16 @@ async def test_list_labels_empty(client, test_user, test_user_tokens, mock_db):
     """Test listing labels returns empty list when no labels exist."""
     project_id = uuid.uuid4()
 
-    # Mock project
     project_mock = MagicMock()
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
     project_mock.members = []
 
-    async def get_mock(model, project_id):
-        if model == type(project_mock):
-            return project_mock
-        return None
+    mock_db.get = AsyncMock(return_value=project_mock)
 
-    mock_db.get = AsyncMock(side_effect=get_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
-    mock_db.execute.return_value.scalars.return_value.all.return_value = []
+    role_result = _mock_execute_result(scalar_one_or_none="admin")
+    labels_result = _mock_execute_result(scalars_all=[])
+    mock_db.execute = AsyncMock(side_effect=[role_result, labels_result])
 
     response = await client.get(
         f"/api/v1/projects/{project_id}/labels",
@@ -129,26 +125,16 @@ async def test_create_label_success(client, test_user, test_user_tokens, mock_db
     """Test creating a label with valid name and color."""
     project_id = uuid.uuid4()
 
-    # Mock project
     project_mock = MagicMock()
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
+    project_mock.members = []
 
-    # Mock label
-    label_mock = MagicMock()
-    label_mock.id = uuid.uuid4()
-    label_mock.project_id = project_id
-    label_mock.name = "bug"
-    label_mock.color = "#EF4444"
+    mock_db.get = AsyncMock(return_value=project_mock)
 
-    async def get_mock(model, project_id):
-        if model == type(project_mock):
-            return project_mock
-        return None
-
-    mock_db.get = AsyncMock(side_effect=get_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
+    # get_project role check
+    role_result = _mock_execute_result(scalar_one_or_none="admin")
+    mock_db.execute = AsyncMock(return_value=role_result)
     mock_db.add = MagicMock()
     mock_db.commit = AsyncMock()
     mock_db.refresh = AsyncMock()
@@ -170,19 +156,15 @@ async def test_create_label_invalid_color(client, test_user, test_user_tokens, m
     """Test creating a label with invalid hex color returns 422."""
     project_id = uuid.uuid4()
 
-    # Mock project
     project_mock = MagicMock()
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
+    project_mock.members = []
 
-    async def get_mock(model, project_id):
-        if model == type(project_mock):
-            return project_mock
-        return None
+    mock_db.get = AsyncMock(return_value=project_mock)
 
-    mock_db.get = AsyncMock(side_effect=get_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
+    role_result = _mock_execute_result(scalar_one_or_none="admin")
+    mock_db.execute = AsyncMock(return_value=role_result)
 
     response = await client.post(
         f"/api/v1/projects/{project_id}/labels",
@@ -199,28 +181,31 @@ async def test_update_label_as_admin(client, test_user, test_user_tokens, mock_d
     project_id = uuid.uuid4()
     label_id = uuid.uuid4()
 
-    # Mock project
     project_mock = MagicMock()
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
+    project_mock.members = []
 
-    # Mock label
     label_mock = MagicMock()
     label_mock.id = label_id
     label_mock.project_id = project_id
     label_mock.name = "feature"
     label_mock.color = "#22C55E"
 
-    async def get_mock(model, project_id_arg):
-        if model == type(project_mock):
+    from app.projects.models import Project, Label
+
+    async def smart_get(model, eid):
+        if model is Project:
             return project_mock
-        if model == type(label_mock) and project_id_arg == label_id:
+        if model is Label:
             return label_mock
         return None
 
-    mock_db.get = AsyncMock(side_effect=get_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
+    mock_db.get = AsyncMock(side_effect=smart_get)
+
+    # 1) get_project role check, 2) update_label role check
+    role_result = _mock_execute_result(scalar_one_or_none="admin")
+    mock_db.execute = AsyncMock(return_value=role_result)
     mock_db.commit = AsyncMock()
     mock_db.refresh = AsyncMock()
 
@@ -241,19 +226,15 @@ async def test_update_label_as_developer(client, test_user, test_user_tokens, mo
     project_id = uuid.uuid4()
     label_id = uuid.uuid4()
 
-    # Mock project
     project_mock = MagicMock()
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
+    project_mock.members = []
 
-    async def get_mock(model, project_id_arg):
-        if model == type(project_mock):
-            return project_mock
-        return None
+    mock_db.get = AsyncMock(return_value=project_mock)
 
-    mock_db.get = AsyncMock(side_effect=get_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "developer"
+    role_result = _mock_execute_result(scalar_one_or_none="developer")
+    mock_db.execute = AsyncMock(return_value=role_result)
 
     response = await client.patch(
         f"/api/v1/projects/{project_id}/labels/{label_id}",
@@ -270,27 +251,29 @@ async def test_delete_label_as_admin(client, test_user, test_user_tokens, mock_d
     project_id = uuid.uuid4()
     label_id = uuid.uuid4()
 
-    # Mock project
     project_mock = MagicMock()
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
+    project_mock.members = []
 
-    # Mock label
     label_mock = MagicMock()
     label_mock.id = label_id
     label_mock.project_id = project_id
 
-    async def get_mock(model, project_id_arg):
-        if model == type(project_mock):
+    from app.projects.models import Project, Label
+
+    async def smart_get(model, eid):
+        if model is Project:
             return project_mock
-        if model == type(label_mock) and project_id_arg == label_id:
+        if model is Label:
             return label_mock
         return None
 
-    mock_db.get = AsyncMock(side_effect=get_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "admin"
-    mock_db.delete = MagicMock()
+    mock_db.get = AsyncMock(side_effect=smart_get)
+
+    role_result = _mock_execute_result(scalar_one_or_none="admin")
+    mock_db.execute = AsyncMock(return_value=role_result)
+    mock_db.delete = AsyncMock()
     mock_db.commit = AsyncMock()
 
     response = await client.delete(
@@ -307,19 +290,15 @@ async def test_delete_label_as_developer(client, test_user, test_user_tokens, mo
     project_id = uuid.uuid4()
     label_id = uuid.uuid4()
 
-    # Mock project
     project_mock = MagicMock()
     project_mock.id = project_id
     project_mock.owner_id = test_user.id
+    project_mock.members = []
 
-    async def get_mock(model, project_id_arg):
-        if model == type(project_mock):
-            return project_mock
-        return None
+    mock_db.get = AsyncMock(return_value=project_mock)
 
-    mock_db.get = AsyncMock(side_effect=get_mock)
-    mock_db.execute = AsyncMock()
-    mock_db.execute.return_value.scalar_one_or_none.return_value = "developer"
+    role_result = _mock_execute_result(scalar_one_or_none="developer")
+    mock_db.execute = AsyncMock(return_value=role_result)
 
     response = await client.delete(
         f"/api/v1/projects/{project_id}/labels/{label_id}",

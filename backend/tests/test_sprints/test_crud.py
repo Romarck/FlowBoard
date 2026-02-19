@@ -1,7 +1,7 @@
 """Tests for sprint CRUD operations."""
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -36,26 +36,26 @@ def test_project_id():
 
 
 @pytest.fixture
-def test_sprint():
+def test_sprint(test_project_id):
     """Create a test sprint."""
     sprint = MagicMock(spec=Sprint)
     sprint.id = uuid4()
-    sprint.project_id = uuid4()
+    sprint.project_id = test_project_id
     sprint.name = "Sprint 1"
     sprint.goal = "Complete feature X"
     sprint.start_date = None
     sprint.end_date = None
     sprint.status = SprintStatus.planning
     sprint.issues = []
-    sprint.created_at = datetime.utcnow()
-    sprint.updated_at = datetime.utcnow()
+    sprint.created_at = datetime.now(timezone.utc)
+    sprint.updated_at = datetime.now(timezone.utc)
     return sprint
 
 
 @pytest.mark.asyncio
 async def test_create_sprint_success(mock_db, test_user, test_project_id, test_sprint):
     """Test successful sprint creation."""
-    with patch('app.sprints.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
+    with patch('app.projects.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
         mock_role.return_value = 'developer'
         mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock(side_effect=lambda x: None)
@@ -72,7 +72,7 @@ async def test_create_sprint_success(mock_db, test_user, test_project_id, test_s
 @pytest.mark.asyncio
 async def test_get_sprints_success(mock_db, test_user, test_project_id, test_sprint):
     """Test fetching all sprints for a project."""
-    with patch('app.sprints.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
+    with patch('app.projects.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
         mock_role.return_value = 'developer'
 
         mock_db.execute = AsyncMock()
@@ -91,7 +91,7 @@ async def test_start_sprint_success(mock_db, test_user, test_project_id, test_sp
     """Test starting a planning sprint."""
     test_sprint.status = SprintStatus.planning
 
-    with patch('app.sprints.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
+    with patch('app.projects.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
         mock_role.return_value = 'project_manager'
 
         # Mock get for fetching the sprint
@@ -118,7 +118,7 @@ async def test_start_sprint_already_active_fails(mock_db, test_user, test_projec
     """Test that starting a sprint fails if one is already active."""
     test_sprint.status = SprintStatus.planning
 
-    with patch('app.sprints.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
+    with patch('app.projects.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
         mock_role.return_value = 'project_manager'
 
         # Mock get for fetching the sprint
@@ -142,7 +142,7 @@ async def test_complete_sprint_moves_incomplete_issues(mock_db, test_user, test_
     """Test that completing a sprint moves incomplete issues to backlog."""
     test_sprint.status = SprintStatus.active
 
-    with patch('app.sprints.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
+    with patch('app.projects.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
         mock_role.return_value = 'project_manager'
 
         # Mock get for fetching the sprint
@@ -169,7 +169,7 @@ async def test_delete_sprint_planning_only(mock_db, test_user, test_project_id, 
     """Test that only planning sprints can be deleted."""
     test_sprint.status = SprintStatus.planning
 
-    with patch('app.sprints.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
+    with patch('app.projects.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
         mock_role.return_value = 'project_manager'
 
         mock_db.get = AsyncMock(return_value=test_sprint)
@@ -187,7 +187,7 @@ async def test_delete_sprint_active_fails(mock_db, test_user, test_project_id, t
     """Test that deleting an active sprint fails."""
     test_sprint.status = SprintStatus.active
 
-    with patch('app.sprints.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
+    with patch('app.projects.service.get_user_role_in_project', new_callable=AsyncMock) as mock_role:
         mock_role.return_value = 'project_manager'
 
         mock_db.get = AsyncMock(return_value=test_sprint)
