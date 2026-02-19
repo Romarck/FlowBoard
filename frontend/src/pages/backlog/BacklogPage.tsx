@@ -21,7 +21,6 @@ export function BacklogPage() {
   });
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [createDialogTrigger, setCreateDialogTrigger] = useState(false);
 
   // Call all hooks unconditionally
   const { data: project, isLoading: projectLoading } = useProject(projectId || '');
@@ -83,7 +82,7 @@ export function BacklogPage() {
   };
 
   const handleCreateSuccess = () => {
-    setCreateDialogTrigger(false);
+    // React Query invalidation is handled inside useCreateIssue hook
   };
 
   // Guard against missing projectId
@@ -134,13 +133,17 @@ export function BacklogPage() {
             </p>
           )}
         </div>
-        <Button
-          onClick={() => setCreateDialogTrigger(true)}
-          className="gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          New Issue
-        </Button>
+        <CreateIssueDialog
+          projectId={projectId}
+          projectMembers={members || []}
+          trigger={
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Issue
+            </Button>
+          }
+          onSuccess={handleCreateSuccess}
+        />
       </div>
 
       {/* Filters */}
@@ -188,15 +191,6 @@ export function BacklogPage() {
             </BacklogGroupHeader>
           ))}
         </div>
-      )}
-
-      {/* Create Issue Dialog */}
-      {createDialogTrigger && members && (
-        <CreateIssueDialog
-          projectId={projectId}
-          projectMembers={members}
-          onSuccess={handleCreateSuccess}
-        />
       )}
 
       {/* Issue Detail Drawer */}

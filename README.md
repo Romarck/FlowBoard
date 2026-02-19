@@ -160,7 +160,7 @@ npm run lint
 
 ### Database
 
-PostgreSQL roda na porta 5432 com os seguintes defaults:
+PostgreSQL roda na porta **5433** (mapeada internamente para 5432) com os seguintes defaults:
 
 - Database: `flowboard`
 - User: `flowboard`
@@ -170,6 +170,8 @@ Conectar diretamente:
 
 ```bash
 docker compose exec db psql -U flowboard -d flowboard
+# ou via porta exposta no host:
+psql -h localhost -p 5433 -U flowboard -d flowboard
 ```
 
 ### Seed de Dados

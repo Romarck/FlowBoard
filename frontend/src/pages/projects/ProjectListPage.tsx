@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FolderKanban, Plus, Loader } from 'lucide-react';
-import { useProjects, useCreateProject, useDeleteProject } from '@/hooks/useProjects';
+import { useQueryClient } from '@tanstack/react-query';
+import { useProjects, useDeleteProject, projectKeys } from '@/hooks/useProjects';
 import { ProjectCard } from '@/components/projects/ProjectCard';
 import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
 import type { ProjectListItem } from '@/types/project';
@@ -11,8 +12,8 @@ export function ProjectListPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
+  const qc = useQueryClient();
   const { data, isLoading } = useProjects(page, pageSize);
-  const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
 
   const projects = data?.items || [];
@@ -142,6 +143,7 @@ export function ProjectListPage() {
         isOpen={showDialog}
         onClose={() => setShowDialog(false)}
         onSuccess={() => {
+          qc.invalidateQueries({ queryKey: projectKeys.lists() });
           setPage(1);
           setSearchQuery('');
         }}
