@@ -18,6 +18,14 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
+    # Database Connection Pool Configuration (E1.6)
+    # Optimized for 100+ concurrent users
+    DB_POOL_SIZE: int = 20  # Number of connections to maintain
+    DB_MAX_OVERFLOW: int = 40  # Additional connections when pool full
+    DB_POOL_TIMEOUT: int = 30  # Timeout in seconds for acquiring connection
+    DB_POOL_RECYCLE: int = 3600  # Recycle connections after 1 hour
+    DB_POOL_PRE_PING: bool = True  # Test connection before use
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
