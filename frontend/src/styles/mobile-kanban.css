@@ -1,0 +1,182 @@
+/* Mobile Kanban Optimization Styles (E1.4) */
+
+/* Touch-friendly button targets - minimum 44x44px (mobile accessibility standard) */
+.touch-target-mobile {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile Kanban Column - Full width on small screens */
+@media (max-width: 640px) {
+  /* Single column layout - no horizontal scroll */
+  .kanban-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* Column tab buttons - touch-optimized */
+  .kanban-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px;
+    margin: -12px -12px 0 -12px;
+    -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling on iOS */
+  }
+
+  .kanban-tab {
+    padding: 10px 16px;
+    min-height: 44px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 150ms ease-in-out;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .kanban-tab:active {
+    transform: scale(0.98);
+  }
+
+  /* Column content - flexible height */
+  .kanban-column-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+    padding: 12px;
+    margin: -12px;
+  }
+
+  /* Issue cards - optimized for touch */
+  .kanban-card {
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    min-height: 44px; /* Touch target minimum */
+  }
+
+  .kanban-card:active {
+    opacity: 0.8;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Drag feedback on mobile */
+  .kanban-card.dragging {
+    opacity: 0.6;
+    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+  }
+
+  /* Droppable zone - larger feedback on mobile */
+  .kanban-column-drop-zone {
+    border-width: 3px;
+    min-height: 200px;
+    border-radius: 12px;
+  }
+
+  .kanban-column-drop-zone.over {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+  }
+
+  /* Hide desktop elements on mobile */
+  .desktop-only {
+    display: none;
+  }
+}
+
+/* Tablet (640px - 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .kanban-container {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .kanban-column {
+    flex-shrink: 0;
+    width: 384px; /* w-96 equivalent */
+  }
+}
+
+/* Desktop (1024px+) */
+@media (min-width: 1025px) {
+  .kanban-container {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+  }
+
+  .kanban-column {
+    flex-shrink: 0;
+    width: 288px; /* w-72 equivalent */
+  }
+
+  .mobile-only {
+    display: none;
+  }
+}
+
+/* Responsive Typography */
+@media (max-width: 640px) {
+  .kanban-column-title {
+    font-size: 14px;
+  }
+
+  .kanban-card-title {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .kanban-card-meta {
+    font-size: 11px;
+  }
+}
+
+/* Landscape Orientation on Mobile */
+@media (max-width: 640px) and (orientation: landscape) {
+  .kanban-column-content {
+    max-height: 60vh;
+  }
+
+  .kanban-card {
+    padding: 8px;
+    min-height: 40px;
+  }
+}
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .kanban-card,
+  .kanban-tab,
+  .kanban-column-drop-zone {
+    transition: none;
+  }
+
+  .kanban-card:active {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  .kanban-card {
+    border-width: 2px;
+  }
+
+  .kanban-tab {
+    border-width: 2px;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .kanban-column-drop-zone.over {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+}
