@@ -46,3 +46,19 @@ coverage/
 
 # Alembic
 *.pyc
+
+# Environment & Secrets (AIOS)
+*.key
+*.pem
+
+# Dependencies (AIOS)
+node_modules
+
+# Build & Logs (AIOS)
+*.log
+logs/
+
+# AIOS Local (AIOS)
+.aios-core/local/
+.claude/settings.local.json
+.aios/install-log.txt
