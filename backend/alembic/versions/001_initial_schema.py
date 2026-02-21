@@ -21,24 +21,25 @@ def upgrade() -> None:
     op.execute('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"')
     op.execute('CREATE EXTENSION IF NOT EXISTS "pg_trgm"')
 
-    # --- Enums ---
-    user_role = sa.Enum("admin", "project_manager", "developer", "viewer", name="user_role")
-    project_methodology = sa.Enum("kanban", "scrum", name="project_methodology")
-    issue_type = sa.Enum("epic", "story", "task", "bug", "subtask", name="issue_type")
-    issue_priority = sa.Enum("critical", "high", "medium", "low", name="issue_priority")
-    status_category = sa.Enum("todo", "in_progress", "done", name="status_category")
-    sprint_status = sa.Enum("planning", "active", "completed", name="sprint_status")
-    relation_type = sa.Enum("blocks", "is_blocked_by", "relates_to", name="relation_type")
-    notification_type = sa.Enum("assigned", "mentioned", "status_changed", "commented", name="notification_type")
+    # --- Enums (created via SQL to be idempotent; create_type=False prevents
+    #     op.create_table() from trying to recreate them) ---
+    op.execute("DO $$ BEGIN CREATE TYPE user_role AS ENUM ('admin', 'project_manager', 'developer', 'viewer'); EXCEPTION WHEN duplicate_object THEN null; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE project_methodology AS ENUM ('kanban', 'scrum'); EXCEPTION WHEN duplicate_object THEN null; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE issue_type AS ENUM ('epic', 'story', 'task', 'bug', 'subtask'); EXCEPTION WHEN duplicate_object THEN null; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE issue_priority AS ENUM ('critical', 'high', 'medium', 'low'); EXCEPTION WHEN duplicate_object THEN null; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE status_category AS ENUM ('todo', 'in_progress', 'done'); EXCEPTION WHEN duplicate_object THEN null; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE sprint_status AS ENUM ('planning', 'active', 'completed'); EXCEPTION WHEN duplicate_object THEN null; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE relation_type AS ENUM ('blocks', 'is_blocked_by', 'relates_to'); EXCEPTION WHEN duplicate_object THEN null; END $$")
+    op.execute("DO $$ BEGIN CREATE TYPE notification_type AS ENUM ('assigned', 'mentioned', 'status_changed', 'commented'); EXCEPTION WHEN duplicate_object THEN null; END $$")
 
-    user_role.create(op.get_bind(), checkfirst=True)
-    project_methodology.create(op.get_bind(), checkfirst=True)
-    issue_type.create(op.get_bind(), checkfirst=True)
-    issue_priority.create(op.get_bind(), checkfirst=True)
-    status_category.create(op.get_bind(), checkfirst=True)
-    sprint_status.create(op.get_bind(), checkfirst=True)
-    relation_type.create(op.get_bind(), checkfirst=True)
-    notification_type.create(op.get_bind(), checkfirst=True)
+    user_role = sa.Enum("admin", "project_manager", "developer", "viewer", name="user_role", create_type=False)
+    project_methodology = sa.Enum("kanban", "scrum", name="project_methodology", create_type=False)
+    issue_type = sa.Enum("epic", "story", "task", "bug", "subtask", name="issue_type", create_type=False)
+    issue_priority = sa.Enum("critical", "high", "medium", "low", name="issue_priority", create_type=False)
+    status_category = sa.Enum("todo", "in_progress", "done", name="status_category", create_type=False)
+    sprint_status = sa.Enum("planning", "active", "completed", name="sprint_status", create_type=False)
+    relation_type = sa.Enum("blocks", "is_blocked_by", "relates_to", name="relation_type", create_type=False)
+    notification_type = sa.Enum("assigned", "mentioned", "status_changed", "commented", name="notification_type", create_type=False)
 
     # --- Table: users ---
     op.create_table(

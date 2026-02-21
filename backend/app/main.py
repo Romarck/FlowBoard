@@ -18,8 +18,26 @@ from app.comments.router import router as comments_router
 from app.search.router import router as search_router
 
 from app.config import settings
+from app.database import Base, engine
+
+# Import all models so they register in Base.metadata before create_all
+import app.auth.models  # noqa: F401
+import app.projects.models  # noqa: F401
+import app.issues.models  # noqa: F401
+import app.sprints.models  # noqa: F401
+import app.comments.models  # noqa: F401
+import app.attachments.models  # noqa: F401
+import app.notifications.models  # noqa: F401
+import app.search.models  # noqa: F401
 
 app = FastAPI(title="FlowBoard API", version="0.1.0")
+
+
+@app.on_event("startup")
+async def create_tables():
+    """Create all tables on startup (idempotent — uses CREATE TABLE IF NOT EXISTS)."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 # Register routers
 app.include_router(auth_router)

@@ -1,11 +1,24 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { CreateSprintDialog, SprintCard } from '@/components/sprints';
+import { AddIssuesToSprintDialog } from '@/components/sprints/AddIssuesToSprintDialog';
 import { useSprints } from '@/hooks/useSprints';
 import { useIssues } from '@/hooks/useIssues';
 import { AlertCircle, Zap } from 'lucide-react';
 
+interface AddIssuesTarget {
+  sprintId: string;
+  sprintName: string;
+}
+
 export function SprintPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const [addIssuesTarget, setAddIssuesTarget] = useState<AddIssuesTarget | null>(null);
+
+  // Hooks must be called unconditionally (rules-of-hooks)
+  const { data: sprints = [], isLoading: sprintsLoading, error: sprintsError } = useSprints(projectId ?? '');
+  const { data: issuesData, isLoading: issuesLoading } = useIssues(projectId ?? '');
+  const allIssues = issuesData?.items ?? [];
 
   if (!projectId) {
     return (
@@ -14,12 +27,6 @@ export function SprintPage() {
       </div>
     );
   }
-
-  // Fetch all sprints
-  const { data: sprints = [], isLoading: sprintsLoading, error: sprintsError } = useSprints(projectId);
-
-  // Fetch all issues for mapping to sprints
-  const { data: allIssues = [], isLoading: issuesLoading } = useIssues(projectId);
 
   // Organize sprints by status
   const activeSprint = sprints.find((s) => s.status === 'active');
@@ -87,6 +94,12 @@ export function SprintPage() {
                 sprint={activeSprint}
                 issues={issuesBySprint(activeSprint.id)}
                 isActive
+                onAddIssues={() =>
+                  setAddIssuesTarget({
+                    sprintId: activeSprint.id,
+                    sprintName: activeSprint.name,
+                  })
+                }
               />
             </section>
           )}
@@ -104,6 +117,12 @@ export function SprintPage() {
                     projectId={projectId}
                     sprint={sprint}
                     issues={issuesBySprint(sprint.id)}
+                    onAddIssues={() =>
+                      setAddIssuesTarget({
+                        sprintId: sprint.id,
+                        sprintName: sprint.name,
+                      })
+                    }
                   />
                 ))}
               </div>
@@ -131,6 +150,19 @@ export function SprintPage() {
             </section>
           )}
         </div>
+      )}
+
+      {/* Add Issues to Sprint Dialog */}
+      {addIssuesTarget && (
+        <AddIssuesToSprintDialog
+          projectId={projectId}
+          sprintId={addIssuesTarget.sprintId}
+          sprintName={addIssuesTarget.sprintName}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setAddIssuesTarget(null);
+          }}
+        />
       )}
     </div>
   );

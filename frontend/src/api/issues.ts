@@ -25,6 +25,7 @@ export interface IssueListItem {
   priority: string;
   assignee: UserBrief | null;
   assignee_id?: string | null; // For backward compatibility
+  sprint_id: string | null;
   story_points: number | null;
   label_count: number;
   created_at: string;

@@ -68,3 +68,18 @@ export function useMoveIssue(projectId: string) {
     },
   });
 }
+
+/**
+ * Assign or remove an issue from a sprint.
+ * Pass `sprintId` to assign, or `null` to remove from sprint.
+ */
+export function useAssignIssueSprint(projectId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ issueId, sprintId }: { issueId: string; sprintId: string | null }) =>
+      issueApi.update(projectId, issueId, { sprint_id: sprintId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: issueKeys.byProject(projectId) });
+    },
+  });
+}

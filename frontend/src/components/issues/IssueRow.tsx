@@ -9,9 +9,10 @@ import type { User } from '@/types/auth';
 
 interface IssueRowProps {
   issue: IssueListItem;
+  projectId?: string;
   status?: WorkflowStatus;
   assignee?: User | null;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 export function IssueRow({ issue, status, assignee, onClick }: IssueRowProps) {

@@ -1,12 +1,13 @@
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Trash2, ChevronDown, Play, CheckCircle } from 'lucide-react';
+import { Calendar, Trash2, ChevronDown, Play, CheckCircle, Plus, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Sprint } from '@/types/sprint';
 import { useStartSprint, useCompleteSprint, useDeleteSprint } from '@/hooks/useSprints';
+import { useAssignIssueSprint } from '@/hooks/useIssues';
 import { useState } from 'react';
 import { IssueRow } from '@/components/issues/IssueRow';
-import type { IssueListItem } from '@/types/issue';
+import type { IssueListItem } from '@/api/issues';
 
 interface SprintCardProps {
   projectId: string;
@@ -24,9 +25,13 @@ export function SprintCard({
   onAddIssues,
 }: SprintCardProps) {
   const [isExpanded, setIsExpanded] = useState(isActive);
+  const [removingIssueId, setRemovingIssueId] = useState<string | null>(null);
   const startSprint = useStartSprint(projectId);
   const completeSprint = useCompleteSprint(projectId);
   const deleteSprint = useDeleteSprint(projectId);
+  const assignSprint = useAssignIssueSprint(projectId);
+
+  const canModifyIssues = sprint.status === 'planning' || sprint.status === 'active';
 
   const handleStart = async () => {
     try {
@@ -50,6 +55,17 @@ export function SprintCard({
       await deleteSprint.mutateAsync(sprint.id);
     } catch (error) {
       console.error('Failed to delete sprint:', error);
+    }
+  };
+
+  const handleRemoveIssue = async (issueId: string) => {
+    setRemovingIssueId(issueId);
+    try {
+      await assignSprint.mutateAsync({ issueId, sprintId: null });
+    } catch (error) {
+      console.error('Failed to remove issue from sprint:', error);
+    } finally {
+      setRemovingIssueId(null);
     }
   };
 
@@ -91,7 +107,7 @@ export function SprintCard({
               {sprint.name}
             </h3>
             <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-              {sprint.issue_count} issues
+              {issues.length} issues
             </span>
           </div>
 
@@ -109,6 +125,17 @@ export function SprintCard({
 
         {/* Actions */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {canModifyIssues && onAddIssues && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onAddIssues}
+              className="gap-1"
+            >
+              <Plus className="h-4 w-4" />
+              Add Issues
+            </Button>
+          )}
           {sprint.status === 'planning' && (
             <>
               <Button
@@ -153,17 +180,44 @@ export function SprintCard({
 
       {/* Issues List (Expanded) */}
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
           {issues.length > 0 ? (
             <>
               {issues.map((issue) => (
-                <IssueRow key={issue.id} issue={issue} projectId={projectId} />
+                <div key={issue.id} className="flex items-center group">
+                  <div className="flex-1 min-w-0">
+                    <IssueRow issue={issue} projectId={projectId} />
+                  </div>
+                  {canModifyIssues && (
+                    <button
+                      onClick={() => handleRemoveIssue(issue.id)}
+                      disabled={removingIssueId === issue.id}
+                      className="flex-shrink-0 ml-1 p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all disabled:opacity-50"
+                      title="Remove from sprint"
+                    >
+                      {removingIssueId === issue.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <X className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
               ))}
+              {/* Add more issues button at bottom of list */}
+              {canModifyIssues && onAddIssues && (
+                <button
+                  onClick={onAddIssues}
+                  className="w-full py-2 mt-1 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded transition-colors"
+                >
+                  + Add more issues
+                </button>
+              )}
             </>
           ) : (
             <div className="py-4 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">No issues in this sprint</p>
-              {sprint.status !== 'completed' && onAddIssues && (
+              {canModifyIssues && onAddIssues && (
                 <Button
                   size="sm"
                   variant="outline"

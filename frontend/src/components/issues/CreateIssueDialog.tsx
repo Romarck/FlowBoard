@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,8 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCreateIssue } from '@/hooks/useIssues';
-import type { CreateIssueRequest } from '@/types/issue';
+import { useCreateIssue, useIssues } from '@/hooks/useIssues';
+import type { CreateIssueRequest, IssueType } from '@/types/issue';
 import type { ProjectMember } from '@/types/project';
 
 interface CreateIssueDialogProps {
@@ -27,6 +27,26 @@ export function CreateIssueDialog({ projectId, projectMembers, isOpen, onOpenCha
   const [error, setError] = useState('');
 
   const createMutation = useCreateIssue(projectId);
+  const { data: issuesData, isLoading: issuesLoading } = useIssues(projectId, { size: 500 });
+
+  const parentConfig = useMemo<{ required: boolean; label: string; filterType: IssueType } | null>(() => {
+    switch (formData.type) {
+      case 'story':
+        return { required: true, label: 'Parent Epic', filterType: 'epic' };
+      case 'task':
+      case 'bug':
+        return { required: false, label: 'Parent Story', filterType: 'story' };
+      case 'subtask':
+        return { required: true, label: 'Parent Task', filterType: 'task' };
+      default:
+        return null;
+    }
+  }, [formData.type]);
+
+  const parentCandidates = useMemo(() => {
+    if (!parentConfig || !issuesData?.items) return [];
+    return issuesData.items.filter(i => i.type === parentConfig.filterType);
+  }, [issuesData?.items, parentConfig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +101,7 @@ export function CreateIssueDialog({ projectId, projectMembers, isOpen, onOpenCha
           {/* Type */}
           <div>
             <Label htmlFor="type">Type *</Label>
-            <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as CreateIssueRequest['type'] }))}>
+            <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as CreateIssueRequest['type'], parent_id: undefined }))}>
               <SelectTrigger id="type" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -94,6 +114,39 @@ export function CreateIssueDialog({ projectId, projectMembers, isOpen, onOpenCha
               </SelectContent>
             </Select>
           </div>
+
+          {/* Parent Issue */}
+          {parentConfig && !issuesLoading && (
+            <div>
+              <Label htmlFor="parent">
+                {parentConfig.label}
+                {parentConfig.required ? ' *' : ''}
+              </Label>
+              <Select
+                value={formData.parent_id || '__none__'}
+                onValueChange={(value) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    parent_id: value === '__none__' ? undefined : value,
+                  }))
+                }
+              >
+                <SelectTrigger id="parent" className="w-full">
+                  <SelectValue placeholder={`Select parent ${parentConfig.filterType}...`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {!parentConfig.required && (
+                    <SelectItem value="__none__">None</SelectItem>
+                  )}
+                  {parentCandidates.map(issue => (
+                    <SelectItem key={issue.id} value={issue.id}>
+                      {issue.key} — {issue.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Title */}
           <div>
@@ -192,7 +245,7 @@ export function CreateIssueDialog({ projectId, projectMembers, isOpen, onOpenCha
             <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.title} className="flex-1 gap-2">
+            <Button type="submit" disabled={isLoading || !formData.title || (!!parentConfig?.required && !formData.parent_id)} className="flex-1 gap-2">
               {isLoading && <Loader className="h-4 w-4 animate-spin" />}
               Create
             </Button>
