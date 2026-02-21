@@ -1,0 +1,166 @@
+{
+  "version": "1.0.0",
+  "name": "FlowBoard AIOS Agent Commands",
+  "description": "AI-Orchestrated System commands for FlowBoard story development cycle",
+  "skills": [
+    {
+      "name": "aios-help",
+      "displayName": "AIOS Help",
+      "description": "Show available AIOS commands and agent information",
+      "invoke": "*help",
+      "category": "AIOS Framework"
+    },
+    {
+      "name": "aios-status",
+      "displayName": "AIOS Status",
+      "description": "Show current story/project status and phase",
+      "invoke": "*status",
+      "category": "AIOS Framework"
+    },
+    {
+      "name": "aios-rules",
+      "displayName": "AIOS Rules",
+      "description": "Show AIOS framework rules and constraints",
+      "invoke": "*rules",
+      "category": "AIOS Framework"
+    },
+    {
+      "name": "create-story",
+      "displayName": "Create Story (Phase 1)",
+      "description": "Create new story from epic (Story Manager @sm)",
+      "invoke": "*create-story",
+      "agent": "@sm",
+      "phase": 1,
+      "category": "Story Lifecycle"
+    },
+    {
+      "name": "validate-story",
+      "displayName": "Validate Story (Phase 2)",
+      "description": "Validate story against 10-point checklist (Product Owner @po)",
+      "invoke": "*validate",
+      "agent": "@po",
+      "phase": 2,
+      "category": "Story Lifecycle"
+    },
+    {
+      "name": "develop-story",
+      "displayName": "Develop Story (Phase 3)",
+      "description": "Start implementing a story (Developer @dev)",
+      "invoke": "*develop",
+      "agent": "@dev",
+      "phase": 3,
+      "category": "Story Lifecycle"
+    },
+    {
+      "name": "qa-gate",
+      "displayName": "QA Gate (Phase 4)",
+      "description": "Run 7-point quality checks on story (QA Engineer @qa)",
+      "invoke": "*qa-gate",
+      "agent": "@qa",
+      "phase": 4,
+      "category": "Story Lifecycle"
+    },
+    {
+      "name": "qa-loop",
+      "displayName": "QA Loop",
+      "description": "Start iterative QA Loop when story fails Phase 4",
+      "invoke": "*qa-loop",
+      "agent": "@qa",
+      "category": "Quality Assurance"
+    },
+    {
+      "name": "create-epic",
+      "displayName": "Create Epic (Phase 0)",
+      "description": "Create new epic from requirement (Product Manager @pm)",
+      "invoke": "*create-epic",
+      "agent": "@pm",
+      "phase": 0,
+      "category": "Epic Management"
+    },
+    {
+      "name": "push-code",
+      "displayName": "Push Code",
+      "description": "Push committed changes to remote (DevOps @devops ONLY)",
+      "invoke": "*push",
+      "agent": "@devops",
+      "exclusive": true,
+      "category": "Git Operations"
+    },
+    {
+      "name": "aios-task",
+      "displayName": "Execute Task",
+      "description": "Execute specific implementation task",
+      "invoke": "*task",
+      "agent": "@dev",
+      "category": "Task Management"
+    },
+    {
+      "name": "override-ids",
+      "displayName": "Override IDS Principle",
+      "description": "Override REUSE > ADAPT > CREATE (AIOS Master @aios-master ONLY)",
+      "invoke": "*override-ids",
+      "agent": "@aios-master",
+      "exclusive": true,
+      "category": "Framework Governance"
+    }
+  ],
+  "agents": [
+    {
+      "name": "@dev",
+      "displayName": "Developer (Dex)",
+      "phase": 3,
+      "description": "Implements stories, marks progress, handles story file updates"
+    },
+    {
+      "name": "@qa",
+      "displayName": "QA Engineer",
+      "phase": 4,
+      "description": "Reviews code, runs quality gates, performs 7-point QA checks"
+    },
+    {
+      "name": "@sm",
+      "displayName": "Story Manager (River)",
+      "phase": 1,
+      "description": "Creates stories from epics with proper structure"
+    },
+    {
+      "name": "@po",
+      "displayName": "Product Owner (Pax)",
+      "phase": 2,
+      "description": "Validates stories against checklist, approves readiness"
+    },
+    {
+      "name": "@pm",
+      "displayName": "Product Manager (Morgan)",
+      "phase": 0,
+      "description": "Creates epics, orchestrates features, writes specs"
+    },
+    {
+      "name": "@architect",
+      "displayName": "Architect",
+      "phase": "N/A",
+      "description": "Makes architecture decisions, technology selection"
+    },
+    {
+      "name": "@devops",
+      "displayName": "DevOps (Gage)",
+      "phase": "N/A",
+      "description": "Exclusive authority: git push, PR creation, CI/CD, MCP management"
+    },
+    {
+      "name": "@aios-master",
+      "displayName": "AIOS Master",
+      "phase": "N/A",
+      "description": "Framework governance, rule enforcement, agent coordination"
+    }
+  ],
+  "commandPrefix": "*",
+  "agentActivation": "@",
+  "phases": {
+    "0": "Vision - Product Manager creates epics",
+    "1": "Create - Story Manager creates stories",
+    "2": "Validate - Product Owner validates stories",
+    "3": "Implement - Developer implements stories",
+    "4": "QA - QA Engineer runs quality checks"
+  }
+}

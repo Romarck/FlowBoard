@@ -1,0 +1,186 @@
+{
+  "version": "1.0.0",
+  "framework": "AIOS",
+  "commands": {
+    "prefix": "*",
+    "agentPrefix": "@",
+    "registry": ".claude/commands.json"
+  },
+  "skills": {
+    "location": "./.claude/claude-code-skills.json",
+    "autoRegister": true
+  },
+  "agents": [
+    {
+      "name": "dev",
+      "displayName": "Developer (Dex)",
+      "shorthand": "@dev",
+      "description": "Implements stories, Phase 3 of SDC",
+      "phase": 3
+    },
+    {
+      "name": "qa",
+      "displayName": "QA Engineer",
+      "shorthand": "@qa",
+      "description": "Quality checks, Phase 4 of SDC",
+      "phase": 4
+    },
+    {
+      "name": "sm",
+      "displayName": "Story Manager (River)",
+      "shorthand": "@sm",
+      "description": "Story creation, Phase 1 of SDC",
+      "phase": 1
+    },
+    {
+      "name": "po",
+      "displayName": "Product Owner (Pax)",
+      "shorthand": "@po",
+      "description": "Story validation, Phase 2 of SDC",
+      "phase": 2
+    },
+    {
+      "name": "pm",
+      "displayName": "Product Manager (Morgan)",
+      "shorthand": "@pm",
+      "description": "Epic creation, Phase 0",
+      "phase": 0
+    },
+    {
+      "name": "architect",
+      "displayName": "Architect",
+      "shorthand": "@architect",
+      "description": "Architecture decisions and design guidance",
+      "phase": "N/A"
+    },
+    {
+      "name": "devops",
+      "displayName": "DevOps (Gage)",
+      "shorthand": "@devops",
+      "description": "Git push, PR creation, CI/CD (EXCLUSIVE authority)",
+      "phase": "N/A",
+      "exclusive": true
+    },
+    {
+      "name": "aios-master",
+      "displayName": "AIOS Master",
+      "shorthand": "@aios-master",
+      "description": "Framework governance and rule enforcement",
+      "phase": "N/A"
+    }
+  ],
+  "globalCommands": {
+    "help": {
+      "command": "*help",
+      "description": "Show available AIOS commands",
+      "category": "Framework"
+    },
+    "status": {
+      "command": "*status",
+      "description": "Show current story and project status",
+      "category": "Framework"
+    },
+    "rules": {
+      "command": "*rules",
+      "description": "Show AIOS framework rules and constraints",
+      "category": "Framework"
+    },
+    "develop": {
+      "command": "*develop {story-id}",
+      "description": "Start Phase 3 implementation (Developer @dev)",
+      "agent": "@dev",
+      "phase": 3,
+      "category": "Story Lifecycle"
+    },
+    "qa-gate": {
+      "command": "*qa-gate {story-id}",
+      "description": "Run Phase 4 quality checks (QA @qa)",
+      "agent": "@qa",
+      "phase": 4,
+      "category": "Story Lifecycle"
+    },
+    "qa-loop": {
+      "command": "*qa-loop {story-id}",
+      "description": "Start QA Loop iteration (QA @qa)",
+      "agent": "@qa",
+      "category": "Quality Assurance"
+    },
+    "create-story": {
+      "command": "*create-story {epic}",
+      "description": "Create new story from epic (Story Manager @sm)",
+      "agent": "@sm",
+      "phase": 1,
+      "category": "Story Lifecycle"
+    },
+    "validate": {
+      "command": "*validate {story-id}",
+      "description": "Validate story against checklist (PO @po)",
+      "agent": "@po",
+      "phase": 2,
+      "category": "Story Lifecycle"
+    },
+    "create-epic": {
+      "command": "*create-epic {name}",
+      "description": "Create new epic from requirement (PM @pm)",
+      "agent": "@pm",
+      "phase": 0,
+      "category": "Epic Management"
+    },
+    "push": {
+      "command": "*push",
+      "description": "Push code to remote (DevOps @devops ONLY - EXCLUSIVE)",
+      "agent": "@devops",
+      "exclusive": true,
+      "category": "Git Operations"
+    },
+    "task": {
+      "command": "*task {name}",
+      "description": "Execute specific task (Developer @dev)",
+      "agent": "@dev",
+      "category": "Task Management"
+    },
+    "override-ids": {
+      "command": "*override-ids {justification}",
+      "description": "Override REUSE > ADAPT > CREATE (AIOS Master ONLY)",
+      "agent": "@aios-master",
+      "exclusive": true,
+      "category": "Framework Governance"
+    }
+  },
+  "storyDevelopmentCycle": {
+    "phases": [
+      {
+        "number": 1,
+        "name": "Create",
+        "agent": "@sm",
+        "status": "Draft",
+        "command": "*create-story",
+        "description": "Story Manager creates story file from epic"
+      },
+      {
+        "number": 2,
+        "name": "Validate",
+        "agent": "@po",
+        "status": "Ready",
+        "command": "*validate",
+        "description": "Product Owner validates story against 10-point checklist"
+      },
+      {
+        "number": 3,
+        "name": "Implement",
+        "agent": "@dev",
+        "status": "InProgress",
+        "command": "*develop",
+        "description": "Developer implements exactly per acceptance criteria"
+      },
+      {
+        "number": 4,
+        "name": "QA",
+        "agent": "@qa",
+        "status": "InReview → Done",
+        "command": "*qa-gate",
+        "description": "QA Engineer runs 7 quality checks"
+      }
+    ]
+  }
+}
