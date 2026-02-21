@@ -1,0 +1,287 @@
+{
+  "version": "1.0.0",
+  "description": "AIOS Agent Command Configuration for FlowBoard",
+  "agents": {
+    "dev": {
+      "name": "Developer (Dex)",
+      "description": "Implements stories, marks progress, handles story file updates and git operations",
+      "authority": {
+        "canDo": [
+          "git add",
+          "git commit",
+          "git branch",
+          "Story file updates (File List, checkboxes)",
+          "Implementation work",
+          "Testing and debugging",
+          "Code review responses"
+        ],
+        "cannotDo": [
+          "git push",
+          "gh pr create",
+          "gh pr merge",
+          "Story AC/scope edits",
+          "Epic creation",
+          "Story validation",
+          "Agent authority changes"
+        ]
+      },
+      "phase": 3,
+      "commands": {
+        "develop": "Start implementing a story (Phase 3)",
+        "task": "Execute specific implementation task",
+        "status": "Show current story status and progress",
+        "commit": "Create git commit with story context"
+      }
+    },
+    "qa": {
+      "name": "QA Engineer",
+      "description": "Reviews code, runs quality gates, performs 7-point QA checks",
+      "authority": {
+        "canDo": [
+          "Quality gate reviews",
+          "Testing and validation",
+          "Code pattern reviews",
+          "Performance checks",
+          "Security reviews",
+          "Documentation verification"
+        ],
+        "cannotDo": [
+          "Implementation changes",
+          "git push",
+          "gh pr create/merge",
+          "Story creation/validation"
+        ]
+      },
+      "phase": 4,
+      "commands": {
+        "qa-gate": "Run QA checks for a story (Phase 4)",
+        "qa-loop": "Start iterative QA Loop with @dev",
+        "check": "Run specific quality check",
+        "review": "Review code changes for a story"
+      }
+    },
+    "sm": {
+      "name": "Story Manager (River)",
+      "description": "Creates stories from epics with proper structure and acceptance criteria",
+      "authority": {
+        "canDo": [
+          "Story file creation",
+          "Story structure setup",
+          "Acceptance criteria definition",
+          "Scope and complexity assessment"
+        ],
+        "cannotDo": [
+          "Epic creation",
+          "Story status changes to Ready",
+          "Implementation work",
+          "git push"
+        ]
+      },
+      "phase": 1,
+      "commands": {
+        "create-story": "Create new story from epic",
+        "validate-format": "Validate story file format",
+        "list-drafts": "Show all Draft stories"
+      }
+    },
+    "po": {
+      "name": "Product Owner (Pax)",
+      "description": "Validates stories against checklist, approves readiness for development",
+      "authority": {
+        "canDo": [
+          "Story validation against 10-point checklist",
+          "Story status changes (Draft → Ready)",
+          "Story AC/scope edits",
+          "Backlog prioritization",
+          "Acceptance criteria approval"
+        ],
+        "cannotDo": [
+          "Story creation",
+          "Implementation work",
+          "Technical decisions",
+          "git operations",
+          "QA decisions"
+        ]
+      },
+      "phase": 2,
+      "commands": {
+        "validate": "Validate story against checklist (Phase 2)",
+        "approve": "Mark story as Ready after validation",
+        "checklist": "Show 10-point validation checklist",
+        "feedback": "Provide validation feedback to @sm"
+      }
+    },
+    "pm": {
+      "name": "Product Manager (Morgan)",
+      "description": "Creates epics, orchestrates high-level features, writes specs",
+      "authority": {
+        "canDo": [
+          "Epic creation",
+          "Epic orchestration",
+          "PRD/Spec writing",
+          "High-level feature planning",
+          "Story breakdown decisions"
+        ],
+        "cannotDo": [
+          "Story creation (only @sm)",
+          "Story validation (only @po)",
+          "Implementation work",
+          "git operations",
+          "QA decisions"
+        ]
+      },
+      "phase": 0,
+      "commands": {
+        "create-epic": "Create new epic from requirement",
+        "spec": "Write specification for feature",
+        "breakdown": "Breakdown epic into stories for @sm"
+      }
+    },
+    "architect": {
+      "name": "Architect",
+      "description": "Makes architectural decisions, technology selection, design patterns",
+      "authority": {
+        "canDo": [
+          "Architecture decisions",
+          "Technology selection",
+          "Design pattern recommendations",
+          "System design reviews",
+          "IDS principle guidance (REUSE > ADAPT > CREATE)"
+        ],
+        "cannotDo": [
+          "Direct implementation",
+          "Story creation/validation",
+          "git operations",
+          "QA decisions"
+        ]
+      },
+      "phase": "N/A",
+      "commands": {
+        "design": "Propose architectural design",
+        "review": "Review architecture of story/component",
+        "ids-check": "Evaluate REUSE > ADAPT > CREATE",
+        "recommend": "Recommend technology/pattern"
+      }
+    },
+    "devops": {
+      "name": "DevOps (Gage)",
+      "description": "Exclusive authority over git push, PR creation/merge, CI/CD, MCP management",
+      "authority": {
+        "exclusive": [
+          "git push",
+          "gh pr create",
+          "gh pr merge",
+          "CI/CD management",
+          "MCP server configuration",
+          "Deployment decisions",
+          "Infrastructure changes"
+        ]
+      },
+      "phase": "N/A",
+      "commands": {
+        "push": "Push committed changes to remote",
+        "create-pr": "Create pull request on GitHub",
+        "merge-pr": "Merge approved pull request",
+        "deploy": "Deploy to production/staging",
+        "ci-status": "Check CI/CD pipeline status"
+      }
+    },
+    "aios-master": {
+      "name": "AIOS Master Framework",
+      "description": "Framework governance, rule enforcement, agent coordination",
+      "authority": {
+        "canDo": [
+          "Agent coordination",
+          "Rule enforcement",
+          "Override with --override-ids flag (requires justification)",
+          "Framework decisions",
+          "Audit trail maintenance"
+        ]
+      },
+      "phase": "N/A",
+      "commands": {
+        "help": "Show available commands",
+        "status": "Show current phase/story status",
+        "rules": "Show framework rules",
+        "audit": "Show audit trail of decisions"
+      }
+    }
+  },
+  "phases": {
+    "0": {
+      "name": "Vision",
+      "agent": "@pm",
+      "description": "Product Manager creates epics and specs"
+    },
+    "1": {
+      "name": "Create",
+      "agent": "@sm",
+      "status": "Draft",
+      "description": "Story Manager creates story file from epic"
+    },
+    "2": {
+      "name": "Validate",
+      "agent": "@po",
+      "status": "Ready",
+      "description": "Product Owner validates story against 10-point checklist"
+    },
+    "3": {
+      "name": "Implement",
+      "agent": "@dev",
+      "status": "InProgress",
+      "description": "Developer implements exactly per acceptance criteria"
+    },
+    "4": {
+      "name": "QA",
+      "agent": "@qa",
+      "status": "InReview → Done",
+      "description": "QA runs 7 quality checks"
+    }
+  },
+  "commandPatterns": {
+    "activate": "@{agent}",
+    "help": "*help",
+    "task": "*task {name}",
+    "execute": "*{command}",
+    "custom": "*{agent-specific-command}"
+  },
+  "globalCommands": {
+    "*help": "Show available commands for current agent or all agents",
+    "*status": "Show current story/project status",
+    "*rules": "Show AIOS framework rules and constraints",
+    "*task": "Execute specific task (pattern: *task {name})",
+    "*develop": "Start Phase 3 implementation (DevAgent)",
+    "*qa-gate": "Run Phase 4 quality gates (QAAgent)",
+    "*create-story": "Create new story from epic (SMAgent)",
+    "*validate": "Validate story readiness (POAgent)",
+    "*create-epic": "Create new epic (PMAgent)",
+    "*push": "Push to git (DevOpsAgent only)",
+    "*override-ids": "Override IDS principle (AIoS-Master only, requires justification)"
+  },
+  "rules": {
+    "authority": "All agents must stay within their designated authority sphere",
+    "exclusive": "DevOps has EXCLUSIVE git push/PR authority",
+    "phasing": "Follow Story Development Cycle: Create → Validate → Implement → QA",
+    "ids": "Decision hierarchy: REUSE > ADAPT > CREATE",
+    "atomicCommits": "Commit before starting next task",
+    "handoff": "Create session handoff in docs/sessions/ before ending session",
+    "violations": "NEVER rules block immediately; ALWAYS rules require confirmation"
+  },
+  "storyStatuses": ["Draft", "Ready", "InProgress", "InReview", "Done"],
+  "qachecks": [
+    "Code patterns consistency",
+    "Unit test coverage",
+    "Acceptance criteria met",
+    "Regression testing",
+    "Performance impact",
+    "Security review",
+    "Documentation completeness"
+  ],
+  "idsGates": [
+    "Search codebase for similar components/patterns",
+    "Check squads/ registry for existing solutions",
+    "Verify REUSE opportunity before ADAPT",
+    "Verify ADAPT opportunity before CREATE",
+    "Document decision rationale in code comments"
+  ]
+}
